@@ -456,6 +456,7 @@
 .hero17-column {
   gap: var(--dl-layout-space-oneandhalfunits);
   width: auto;
+  max-width: 80%;
   display: flex;
   align-items: center;
   flex-direction: column;
@@ -481,7 +482,7 @@
 .hero17-actions {
   gap: var(--dl-layout-space-unit);
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   padding-top: var(--dl-layout-space-unit);
 }
  
@@ -4118,16 +4119,16 @@ body {
 /* Responsive typography */
 @media (max-width: 768px) {
   h1 {
-    font-size: 2rem;
-  }
-  h2 {
-    font-size: 1.5rem;
-  }
-  h3 {
     font-size: 1.25rem;
   }
+  h2 {
+    font-size: 1rem;
+  }
+  h3 {
+    font-size: 0.75rem;
+  }
   p {
-    font-size: 0.875rem;
+    font-size: 0.3rem;
   }
 } 
 
@@ -4290,13 +4291,14 @@ Contact Section
 	background-color: var(--ezy-link-bg);
 	border: none;
 	border-radius: 10px;
-	width: 500px;
+	width: auto;
 	transition: box-shadow .15s ease-in-out;
+  text-overflow: ellipsis;
 }
 
 @media (min-width: 768px) {
 	.ezy__contact9-link {
-		max-width: 350px;
+		max-width: 80%;
 	}
 }
 

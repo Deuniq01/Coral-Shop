@@ -17,9 +17,9 @@ function adjustFontSize() {
   let newSize = baseSize;
 
   if (width < 600) {
-    newSize = 14;
+    newSize = 12;
   } else if (width < 900) {
-    newSize = 15;
+    newSize = 14;
   }
 
   document.documentElement.style.fontSize = `${newSize}px`;
@@ -96,18 +96,5 @@ document.addEventListener('DOMContentLoaded', function () {
 
       setTimeout(() => success.remove(), 5000);
     }, 1000);
-  });
-});
-
-// Ensure the body gets a class when the sidebar toggle is checked so CSS can push content
-document.addEventListener('DOMContentLoaded', function () {
-  const sidebarCheckbox = document.querySelector('.vertical-sidebar input[type="checkbox"]');
-  if (!sidebarCheckbox) return;
-
-  // initialize class from current state
-  document.body.classList.toggle('sidebar-expanded', sidebarCheckbox.checked);
-
-  sidebarCheckbox.addEventListener('change', function () {
-    document.body.classList.toggle('sidebar-expanded', sidebarCheckbox.checked);
   });
 });
