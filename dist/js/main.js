@@ -98,3 +98,16 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 1000);
   });
 });
+
+// Ensure the body gets a class when the sidebar toggle is checked so CSS can push content
+document.addEventListener('DOMContentLoaded', function () {
+  const sidebarCheckbox = document.querySelector('.vertical-sidebar input[type="checkbox"]');
+  if (!sidebarCheckbox) return;
+
+  // initialize class from current state
+  document.body.classList.toggle('sidebar-expanded', sidebarCheckbox.checked);
+
+  sidebarCheckbox.addEventListener('change', function () {
+    document.body.classList.toggle('sidebar-expanded', sidebarCheckbox.checked);
+  });
+});
