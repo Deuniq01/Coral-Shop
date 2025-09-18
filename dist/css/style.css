@@ -449,7 +449,13 @@ figcaption {
 }
 
 .sidebar__link:active {
-    background-color: var(--bg--active);
+    background: var(--bg--hover);
+    .icon svg {
+        fill: var(--accent--primary);
+    }
+    .text {
+      color: var(--dark--primary);
+    }
 }
 
 aside:not(:has(:checked)) .toggle--open,
@@ -1356,5 +1362,28 @@ aside:not(:has(:checked))
   .features24-image-container {
     max-width: 280px;
     max-height: 200px;
+  }
+}
+
+/* Sidebar active link styling (scrollspy) */
+.vertical-sidebar .sidebar__link.active {
+  background: var(--bg--active);
+  border-radius: var(--brad-inner);
+  outline: none;
+}
+
+.vertical-sidebar .sidebar__link.active .icon svg {
+  fill: var(--accent--primary) !important;
+}
+
+.vertical-sidebar .sidebar__link.active .text {
+  color: var(--dark--primary) !important;
+  font-weight: 600;
+}
+
+/* ensure hover/active states remain readable on small screens */
+@media (max-width: 767px) {
+  .vertical-sidebar .sidebar__link.active {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   }
 }

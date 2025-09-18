@@ -98,3 +98,81 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 1000);
   });
 });
+
+// Sidebar scrollspy: mark sidebar link active when its section is in view
+document.addEventListener('DOMContentLoaded', function () {
+  const links = Array.from(document.querySelectorAll('.vertical-sidebar .sidebar__link[href^="#"]'));
+  if (!links.length) return;
+
+  const idToLink = new Map();
+  const sections = [];
+
+  links.forEach((link) => {
+    const href = link.getAttribute('href');
+    if (!href || !href.startsWith('#')) return;
+    const id = href.slice(1);
+    const section = document.getElementById(id);
+    if (section) {
+      idToLink.set(id, link);
+      sections.push(section);
+    }
+  });
+
+  if (!sections.length) return;
+
+  // Use IntersectionObserver to toggle .active when a section is mostly visible
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        const id = entry.target.id;
+        const link = idToLink.get(id);
+        if (!link) return;
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          // clear others
+          idToLink.forEach((l) => l.classList.remove('active'));
+          link.classList.add('active');
+        }
+      });
+    },
+    { root: null, threshold: [0.5] }
+  );
+
+  sections.forEach((s) => observer.observe(s));
+
+  // Fallback: ensure a link is active on scroll if observer thresholds aren't met
+  const throttle = (fn, wait) => {
+    let last = 0;
+    return function () {
+      const now = Date.now();
+      if (now - last > wait) {
+        last = now;
+        fn();
+      }
+    };
+  };
+
+  const updateClosest = () => {
+    let closest = null;
+    let closestDist = Infinity;
+    sections.forEach((s) => {
+      const rect = s.getBoundingClientRect();
+      const dist = Math.abs(rect.top);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closest = s;
+      }
+    });
+    if (closest) {
+      const link = idToLink.get(closest.id);
+      if (link && !link.classList.contains('active')) {
+        idToLink.forEach((l) => l.classList.remove('active'));
+        link.classList.add('active');
+      }
+    }
+  };
+
+  window.addEventListener('scroll', throttle(updateClosest, 150), { passive: true });
+  window.addEventListener('resize', throttle(updateClosest, 200));
+  // initial run
+  updateClosest();
+});
