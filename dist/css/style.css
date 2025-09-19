@@ -1,6 +1,6 @@
 /* Bootstrap-like Grid System */
 .container {
-  width: 100%;
+  width: 100vw;
   margin-right: auto;
   margin-left: auto;
   padding-right: 0px;
@@ -15,6 +15,8 @@
   align-items: center;
   align-content: center;
   text-align: center;
+  flex-direction: row;
+  justify-content: center;
 }
 .col {
   flex-basis: 0;
@@ -759,7 +761,7 @@ aside:not(:has(:checked))
 }
  
 .thq-card {
-  gap: var(--dl-layout-space-oneandhalfunits);
+  gap: var(--dl-layout-size-xsmall);
   display: flex;
   padding: var(--dl-layout-space-twounits);
   align-items: stretch;
@@ -1009,6 +1011,23 @@ aside:not(:has(:checked))
   text-transform: none;
   text-decoration: none;
 }
+
+.ezy__contact9 {
+  max-width: 80%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin: 0 auto;
+}
+
+.justify-content-between {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  align-items: center;
+
+}
  
 @media(max-width: 767px) {
   .thq-section-padding {
@@ -1046,6 +1065,18 @@ aside:not(:has(:checked))
   }
   .thq-img-scale {
     width: 100%;
+  }
+  h1 {
+    font-size: 1.25rem;
+  }
+  h2 {
+    font-size: 1rem;
+  }
+  h3 {
+    font-size: 0.75rem;
+  }
+  p {
+    font-size: 0.3rem;
   }
 }
  
@@ -1087,6 +1118,18 @@ aside:not(:has(:checked))
   .main-content {
     margin-left: 50px;
     align-content: center;
+  }
+  h1 {
+    font-size: 1.25rem;
+  }
+  h2 {
+    font-size: 1rem;
+  }
+  h3 {
+    font-size: 0.75rem;
+  }
+  p {
+    font-size: 0.3rem;
   }
 }
 
@@ -1134,6 +1177,18 @@ aside:not(:has(:checked))
   }
   .thq-grid-4 {
     grid-template-columns: 1fr 1fr 1fr;
+  }
+  h1 {
+    font-size: 1.25rem;
+  }
+  h2 {
+    font-size: 1rem;
+  }
+  h3 {
+    font-size: 0.75rem;
+  }
+  p {
+    font-size: 0.3rem;
   }
 }
 
@@ -1335,10 +1390,6 @@ aside:not(:has(:checked))
   }
 
   /* ensure children fit inside the hero */
-  .home-hero17 > * {
-    max-width: 100%;
-    box-sizing: border-box;
-  }
   .thq-heading-1, h1 {
     font-size: 2.5rem;
   }
@@ -1356,12 +1407,36 @@ aside:not(:has(:checked))
   .main-content {
     margin-left: 50px;
   }
+  h1 {
+    font-size: 1.25rem;
+  }
+  h2 {
+    font-size: 1rem;
+  }
+  h3 {
+    font-size: 0.75rem;
+  }
+  p {
+    font-size: 0.3rem;
+  }
 }
 
 @media (max-width: 479px) {
   .features24-image-container {
     max-width: 280px;
     max-height: 200px;
+  }
+  h1 {
+    font-size: 1.25rem;
+  }
+  h2 {
+    font-size: 1rem;
+  }
+  h3 {
+    font-size: 0.75rem;
+  }
+  p {
+    font-size: 0.3rem;
   }
 }
 

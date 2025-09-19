@@ -33,6 +33,18 @@
   .header .topbar .contact-info i span {
     font-size: 13px;
   }
+  h1 {
+    font-size: 1.25rem;
+  }
+  h2 {
+    font-size: 1rem;
+  }
+  h3 {
+    font-size: 0.75rem;
+  }
+  p {
+    font-size: 0.3rem;
+  }
 }
  
 .navbar8-page11 {
@@ -426,6 +438,18 @@
   .navbar8-link5-menu-list {
     display: none;
   }
+  h1 {
+    font-size: 1.25rem;
+  }
+  h2 {
+    font-size: 1rem;
+  }
+  h3 {
+    font-size: 0.75rem;
+  }
+  p {
+    font-size: 0.3rem;
+  }
 }
  
 @media(max-width: 479px) {
@@ -435,6 +459,18 @@
   .navbar8-mobile-menu {
     padding: var(--dl-layout-space-unit);
   }
+  h1 {
+    font-size: 1.25rem;
+  }
+  h2 {
+    font-size: 1rem;
+  }
+  h3 {
+    font-size: 0.75rem;
+  }
+  p {
+    font-size: 0.3rem;
+  }
 }
 
 .hero17-wrapper {
@@ -443,7 +479,7 @@
  
 .hero17-header78 {
   gap: var(--dl-layout-space-threeunits);
-  width: 100%;
+  width: 100vw;
   height: auto;
   display: flex;
   overflow: hidden;
@@ -663,6 +699,18 @@
   .hero17-content2 {
     width: 100%;
   }
+  h1 {
+    font-size: 1.25rem;
+  }
+  h2 {
+    font-size: 1rem;
+  }
+  h3 {
+    font-size: 0.75rem;
+  }
+  p {
+    font-size: 0.3rem;
+  }
 }
  
 @media(max-width: 479px) {
@@ -675,6 +723,18 @@
   }
   .hero17-button2 {
     width: 100%;
+  }
+  h1 {
+    font-size: 1.25rem;
+  }
+  h2 {
+    font-size: 1rem;
+  }
+  h3 {
+    font-size: 0.75rem;
+  }
+  p {
+    font-size: 0.3rem;
   }
 }
 
@@ -891,6 +951,18 @@
     grid-gap: var(--dl-layout-space-twounits);
     grid-template-columns: 1fr;
   }
+  h1 {
+    font-size: 1.25rem;
+  }
+  h2 {
+    font-size: 1rem;
+  }
+  h3 {
+    font-size: 0.75rem;
+  }
+  p {
+    font-size: 0.3rem;
+  }
 }
 
 .cta26-wrapper {
@@ -989,6 +1061,18 @@
     flex-direction: column;
     justify-content: flex-start;
   }
+  h1 {
+    font-size: 1.25rem;
+  }
+  h2 {
+    font-size: 1rem;
+  }
+  h3 {
+    font-size: 0.75rem;
+  }
+  p {
+    font-size: 0.3rem;
+  }
 }
  
 @media(max-width: 479px) {
@@ -999,6 +1083,18 @@
   }
   .cta26-button {
     flex: 1;
+  }
+  h1 {
+    font-size: 1.25rem;
+  }
+  h2 {
+    font-size: 1rem;
+  }
+  h3 {
+    font-size: 0.75rem;
+  }
+  p {
+    font-size: 0.3rem;
   }
 }
 
@@ -1250,6 +1346,7 @@
   flex-direction: column;
   align-content: center;
   align-self: center;
+  flex-wrap: wrap;
 }
  
 .pricing14-text100 {
@@ -1258,7 +1355,7 @@
  
 .pricing14-content {
   gap: var(--dl-layout-space-oneandhalfunits);
-  width: 100%;
+  width: 100vw;
   display: flex;
   max-width: 800px;
   align-self: stretch;
@@ -1272,6 +1369,9 @@
  
 .pricing14-text102 {
   text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
 }
  
 .pricing14-tabs {
@@ -2280,15 +2380,13 @@
  
 @media(max-width: 991px) {
   .pricing14-container1 {
-    flex-direction: column;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: center;
+    justify-content: center;
   }
   .pricing14-column3 {
-    width: 100%;
-  }
-  .pricing14-container2 {
-    flex-direction: column;
-  }
-  .pricing14-column6 {
     width: 100%;
   }
 }
@@ -2322,6 +2420,8 @@
  
 .steps2-container2 {
   align-items: start;
+  display: flex;
+  flex-wrap: wrap;
 }
  
 .steps2-section-header {
@@ -2331,6 +2431,7 @@
   position: sticky;
   align-items: flex-start;
   flex-direction: column;
+  margin-bottom: 30px;
 }
  
 .steps2-actions {
@@ -3771,11 +3872,21 @@
 }
  
 .home-fragment180 {
-  display: contents;
+  display: flex;
+  width: 70vw;
+  flex-direction: column;
+  flex-wrap: wrap;
 }
  
 .home-text180 {
   display: inline-block;
+}
+
+.note {
+  display: inline-block;
+  text-emphasis: double-circle;
+  font-size: 2rem;
+
 }
  
 .home-fragment181 {
@@ -4251,6 +4362,7 @@ Contact Section
 	font-size: 18px;
 	line-height: 25px;
 	color: var(--bs-body-color);
+  text-align: justify;
 }
 
 .ezy__contact9-form-card {
