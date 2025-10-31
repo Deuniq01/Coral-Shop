@@ -1,0 +1,4 @@
+name,email,password,isAdmin,createdAt
+Habeeb Abdulkareem,deuniq01@gmail.com,asdfghjkl,false,2025-10-28T02:05:40.411Z
+Admin User,admin@coralshopping.ng,admin123,true,2025-10-28T02:25:04Z
+habeeb,habeeb@gmail.com,asdfghjkl,False,2025-10-31T08:58:11.566Z
