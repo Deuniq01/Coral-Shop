@@ -1,1 +1,13 @@
+{
+  "name": "coral-shopping",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "pg": "^8.11.0",
+    "csv-parse": "^5.4.0"
+  },
+  "scripts": {
+    "import-db": "node scripts/import_db.js"
+  }
+}
 
