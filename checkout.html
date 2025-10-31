@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - Coral Shopping</title>
+    <meta name="description" content="Complete your purchase at Coral Shopping">
+    <meta name="keywords" content="checkout, payment, shipping">
+    <meta property="og:title" content="Checkout - Coral Shopping">
+    <meta property="og:description" content="Complete your order">
+    <meta property="twitter:title" content="Checkout">
+    <meta property="twitter:description" content="Complete your purchase">
+
+    <script src="https://resource.trickle.so/vendor_lib/unpkg/react@18/umd/react.production.min.js"></script>
+    <script src="https://resource.trickle.so/vendor_lib/unpkg/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://resource.trickle.so/vendor_lib/unpkg/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://resource.trickle.so/vendor_lib/unpkg/lucide-static@0.516.0/font/lucide.css" rel="stylesheet">
+
+    <style type="text/tailwindcss">
+    @layer theme {
+        :root {
+            --primary-color: #3538A0;
+            --secondary-color: #FF9E5;
+            --accent-color: #FFCB05;
+            --text-dark: #2C3E50;
+            --text-light: #7F8C8D;
+
+            --border-color: #F0E8EC;
+        }
+    }
+
+    @layer base {
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            color: var(--text-dark);
+        }
+    }
+
+    @layer components {
+        .btn-primary {
+            @apply bg-[var(--primary-color)] text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity;
+        }
+    }
+    </style>
+    <link rel="icon" href="https://app.trickle.so/storage/app/coral shopping_125319.png">
+    <meta property="og:image" content="https://app.trickle.so/storage/app/Cora logol.jpg">
+    <meta name="twitter:title" content="Coral Shopping - Your One-Stop Shop for Quality Items">
+    <meta name="twitter:description" content="Shop quality foodstuffs, gifts, and household items at Coral Shopping. Get personalized recommendations with AI assistance.">
+    <meta name="twitter:image" content="https://app.trickle.so/storage/app/Cora logol.jpg">
+</head>
+<body>
+
+    <div id="root"></div>
+    <script type="text/babel" src="components/CheckoutHeader.js"></script>
+    <script type="text/babel" src="components/OrderSummary.js"></script>
+    <script type="text/babel" src="components/ShippingForm.js"></script>
+    <script type="text/babel" src="components/PaymentOptions.js"></script>
+    <script type="text/babel" src="components/Footer.js"></script>
+    <script type="text/babel" src="utils/auth.js"></script>
+    <script type="text/babel" src="utils/cart.js"></script>
+    <script type="text/babel" src="utils/orders.js"></script>
+    <script type="text/babel" src="checkout-app.js"></script>
+</body>
+</html>
