@@ -91,3 +91,4 @@ function PaymentOptions({ onPlaceOrder, total }) {
     return null;
   }
 }
+
