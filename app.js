@@ -88,7 +88,7 @@ class ErrorBoundary extends React.Component {
           onAuthClick={() => setShowAuth(true)}
         />
         <Hero />
-        <ProductList onAddToCart={addToCart} />
+        <FeaturedProducts onAddToCart={addToCart} />
         <CustomShopForm />
         <WhatsAppCTA />
         <Footer />

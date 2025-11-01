@@ -1,10 +1,20 @@
 function PaymentOptions({ onPlaceOrder, total }) {
   try {
     const [selectedMethod, setSelectedMethod] = React.useState('transfer');
+    const [copied, setCopied] = React.useState(false);
 
     const paymentMethods = [
       { id: 'transfer', name: 'Bank Transfer', icon: 'building-2' }
     ];
+
+    const copyAccountNumber = () => {
+      navigator.clipboard.writeText('9161965441').then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }).catch(err => {
+        console.error('Failed to copy:', err);
+      });
+    };
 
     return (
       <div className="bg-white rounded-lg shadow p-6" data-name="payment-options" data-file="components/PaymentOptions.js">
@@ -43,7 +53,20 @@ function PaymentOptions({ onPlaceOrder, total }) {
               </div>
               <div className="flex justify-between">
                 <span className="text-[var(--text-light)]">Account Number:</span>
-                <span className="font-medium">9161965441</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">9161965441</span>
+                  <button 
+                    onClick={copyAccountNumber}
+                    className="p-1 hover:bg-blue-100 rounded transition-colors"
+                    title="Copy account number"
+                  >
+                    {copied ? (
+                      <div className="icon-check text-green-600 text-sm"></div>
+                    ) : (
+                      <div className="icon-copy text-blue-600 text-sm"></div>
+                    )}
+                  </button>
+                </div>
               </div>
               <div className="flex justify-between">
                 <span className="text-[var(--text-light)]">Account Name:</span>
