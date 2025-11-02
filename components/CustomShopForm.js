@@ -11,12 +11,26 @@ function CustomShopForm() {
     const handleSubmit = async (e) => {
       e.preventDefault();
       try {
-        await trickleCreateObject('custom_order', {...formData, createdAt: new Date().toISOString()});
+        const resp = await fetch('/.netlify/functions/place-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'custom',
+            ...formData,
+            createdAt: new Date().toISOString()
+          })
+        });
+        
+        if (!resp.ok) {
+          throw new Error('Failed to submit custom order');
+        }
+        
         setSubmitted(true);
         setTimeout(() => setSubmitted(false), 3000);
         setFormData({name: '', phone: '', items: '', budget: ''});
       } catch (error) {
         console.error('Failed to submit form:', error);
+        alert('Failed to submit order. Please try again.');
       }
     };
 

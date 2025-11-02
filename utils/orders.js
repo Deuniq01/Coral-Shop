@@ -5,6 +5,11 @@ async function createOrder(userId, items, status = 'pending') {
       throw new Error('Invalid order data');
     }
 
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      throw new Error('Please login to place order');
+    }
+
     const payload = {
       userId: userId || null,
       items: items.map(i => ({ productId: i.id, quantity: i.quantity })),
@@ -14,7 +19,10 @@ async function createOrder(userId, items, status = 'pending') {
 
     const resp = await fetch('/.netlify/functions/place-order', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
       body: JSON.stringify(payload)
     });
     if (!resp.ok) {
@@ -35,11 +43,20 @@ async function getUserOrders(userId) {
       console.warn('No userId provided to getUserOrders');
       return [];
     }
-    const result = await trickleListObjects(`order:${userId}`, 100, true);
-    if (!result || !result.items) {
-      return [];
+    
+    const token = localStorage.getItem('authToken');
+    const resp = await fetch(`/.netlify/functions/get-orders?userId=${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!resp.ok) {
+      throw new Error('Failed to fetch orders');
     }
-    return result.items.map(item => ({...item.objectData, id: item.objectId}));
+    
+    const orders = await resp.json();
+    return orders;
   } catch (error) {
     console.error('Failed to get user orders:', error);
     return [];
@@ -51,8 +68,27 @@ async function updateOrderStatus(userId, orderId, status) {
     if (!userId || !orderId || !status) {
       throw new Error('Invalid update parameters');
     }
-    const order = await trickleUpdateObject(`order:${userId}`, orderId, { status });
-    return {...order.objectData, id: order.objectId};
+    
+    const token = localStorage.getItem('authToken');
+    const resp = await fetch('/.netlify/functions/update-order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        userId,
+        orderId,
+        status
+      })
+    });
+
+    if (!resp.ok) {
+      throw new Error('Failed to update order status');
+    }
+
+    const order = await resp.json();
+    return order;
   } catch (error) {
     console.error('Failed to update order status:', error);
     throw error;
