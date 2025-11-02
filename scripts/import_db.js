@@ -13,15 +13,10 @@ if (!DATABASE_URL) {
 const pool = new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false } });
 
 async function ensureSchema(client) {
-  await client.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto`);
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS objects (
-      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      type text NOT NULL,
-      object_data jsonb,
-      created_at timestamptz DEFAULT now()
-    );
-  `);
+  // Read and execute schema.sql
+  const schemaPath = path.join(__dirname, '..', 'netlify', 'functions', 'schema.sql');
+  const schema = fs.readFileSync(schemaPath, 'utf8');
+  await client.query(schema);
 }
 
 function normalizeValue(v) {
@@ -30,20 +25,112 @@ function normalizeValue(v) {
   try { return JSON.parse(v); } catch (e) { return v; }
 }
 
+// Caches for tracking processed entities
+const processedEmails = new Set();
+const userCache = new Map(); // email -> uuid
+const productCache = new Map(); // sku -> uuid
+
+async function importUsers(client, records) {
+  console.log('Importing users...');
+  for (const record of records) {
+    if (!record.email || processedEmails.has(record.email)) continue;
+    processedEmails.add(record.email);
+    
+    const userResult = await client.query(
+      'INSERT INTO users (email, name, address, phone) VALUES ($1, $2, $3, $4) RETURNING id',
+      [record.email, record.name || 'Unknown', record.address || '', record.phone || '']
+    );
+    userCache.set(record.email, userResult.rows[0].id);
+  }
+}
+
+async function importProducts(client, records) {
+  console.log('Importing products...');
+  for (const record of records) {
+    if (!record.sku || productCache.has(record.sku)) continue;
+    
+    const productResult = await client.query(
+      'INSERT INTO products (sku, name, description, price, stock_quantity) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+      [
+        record.sku,
+        record.name || 'Unknown Product',
+        record.description || '',
+        parseFloat(record.price) || 0,
+        parseInt(record.stock_quantity, 10) || 0
+      ]
+    );
+    productCache.set(record.sku, productResult.rows[0].id);
+  }
+}
+
+async function importOrders(client, records) {
+  console.log('Importing orders...');
+  const processedOrders = new Set();
+  
+  for (const record of records) {
+    if (!record.order_id || processedOrders.has(record.order_id)) continue;
+    processedOrders.add(record.order_id);
+    
+    const userId = userCache.get(record.email);
+    if (!userId) {
+      console.warn(`Skipping order ${record.order_id} - user ${record.email} not found`);
+      continue;
+    }
+    
+    // Create order
+    const orderResult = await client.query(
+      'INSERT INTO orders (user_id, status, total_amount, shipping_address) VALUES ($1, $2, $3, $4) RETURNING id',
+      [
+        userId,
+        record.status || 'pending',
+        parseFloat(record.total_amount) || 0,
+        record.shipping_address || record.address || ''
+      ]
+    );
+    const orderId = orderResult.rows[0].id;
+
+    // Add order items for this order
+    const orderItems = records.filter(r => r.order_id === record.order_id);
+    for (const item of orderItems) {
+      const productId = productCache.get(item.sku);
+      if (productId) {
+        await client.query(
+          'INSERT INTO order_items (order_id, product_id, quantity, price_at_time) VALUES ($1, $2, $3, $4)',
+          [
+            orderId,
+            productId,
+            parseInt(item.quantity, 10) || 1,
+            parseFloat(item.price) || 0
+          ]
+        );
+      }
+    }
+  }
+}
+
 async function importCsv(filePath, type) {
   const content = fs.readFileSync(filePath, 'utf8');
   const records = parse(content, { columns: true, skip_empty_lines: true });
   const client = await pool.connect();
+  
   try {
+    await client.query('BEGIN');
     await ensureSchema(client);
-    for (const row of records) {
-      const obj = {};
-      for (const k of Object.keys(row)) {
-        obj[k] = normalizeValue(row[k]);
-      }
-      await client.query(`INSERT INTO objects (type, object_data) VALUES ($1, $2)`, [type, obj]);
+
+    // Import in the correct order to maintain referential integrity
+    if (type === 'user') {
+      await importUsers(client, records);
+    } else if (type === 'product') {
+      await importProducts(client, records);
+    } else if (type === 'custom_order') {
+      await importOrders(client, records);
     }
+
+    await client.query('COMMIT');
     console.log(`Imported ${records.length} rows from ${path.basename(filePath)} as ${type}`);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
   } finally {
     client.release();
   }

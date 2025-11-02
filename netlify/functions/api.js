@@ -26,11 +26,16 @@ async function ensureSchema(client) {
 }
 
 exports.handler = async function(event) {
-  // API key enforcement (if FUNCTIONS_API_KEY is set)
-  if (FUNCTIONS_API_KEY) {
+  // Check if this is a write operation that needs API key
+  const body = event.body ? JSON.parse(event.body) : {};
+  const { action, resource, data, id, limit } = body;
+  const isWriteOperation = ['create', 'update', 'delete'].includes(action);
+
+  // API key enforcement for write operations only (if FUNCTIONS_API_KEY is set)
+  if (FUNCTIONS_API_KEY && isWriteOperation) {
     const provided = (event.headers && (event.headers['x-api-key'] || event.headers['X-API-KEY'])) || null;
     if (!provided || provided !== FUNCTIONS_API_KEY) {
-      return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized - missing or invalid API key' }) };
+      return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized - missing or invalid API key for write operation' }) };
     }
   }
 
@@ -42,9 +47,6 @@ exports.handler = async function(event) {
     const client = await pool.connect();
     try {
       await ensureSchema(client);
-
-      const body = event.body ? JSON.parse(event.body) : {};
-      const { action, resource, data, id, limit } = body;
 
       if (action === 'list') {
         const l = parseInt(limit, 10) || 100;
