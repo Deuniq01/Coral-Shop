@@ -1,17 +1,28 @@
 async function createOrder(userId, items, status = 'pending') {
   try {
-    if (!userId || !items || items.length === 0) {
+    // New server-side placement: call place-order function which writes to normalized tables
+    if (!items || items.length === 0) {
       throw new Error('Invalid order data');
     }
-    const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const order = await trickleCreateObject(`order:${userId}`, {
-      userId,
-      items,
-      total,
-      status,
-      createdAt: new Date().toISOString()
+
+    const payload = {
+      userId: userId || null,
+      items: items.map(i => ({ productId: i.id, quantity: i.quantity })),
+      shipping_address: null,
+      payment_method: null
+    };
+
+    const resp = await fetch('/.netlify/functions/place-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
-    return {...order.objectData, id: order.objectId};
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`Order API error: ${resp.status} ${errText}`);
+    }
+    const data = await resp.json();
+    return { id: data.orderId };
   } catch (error) {
     console.error('Failed to create order:', error);
     throw error;
