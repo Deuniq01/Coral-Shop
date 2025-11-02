@@ -31,8 +31,12 @@ exports.handler = async function(event) {
   const { action, resource, data, id, limit } = body;
   const isWriteOperation = ['create', 'update', 'delete'].includes(action);
 
+  // Allow unauthenticated creation of orders from the client (so customers can place orders)
+  // while still requiring the FUNCTIONS_API_KEY for other write operations.
+  const isOrderCreate = (action === 'create' && typeof resource === 'string' && resource.startsWith('order'));
+
   // API key enforcement for write operations only (if FUNCTIONS_API_KEY is set)
-  if (FUNCTIONS_API_KEY && isWriteOperation) {
+  if (FUNCTIONS_API_KEY && isWriteOperation && !isOrderCreate) {
     const provided = (event.headers && (event.headers['x-api-key'] || event.headers['X-API-KEY'])) || null;
     if (!provided || provided !== FUNCTIONS_API_KEY) {
       return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized - missing or invalid API key for write operation' }) };
