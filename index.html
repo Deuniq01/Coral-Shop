@@ -61,7 +61,19 @@
 </head>
 
 <body>
-    <div id="root"></div>
+    <div id="root"> 
+        <div id="loading" class="min-h-screen flex items-center justify-center">
+            <div class="text-center text-[var(--text-light)]">Loading…</div>
+        </div>
+    </div>
+    <!-- Utilities first to ensure globals are available to components -->
+    <script src="utils/trickleShim.js"></script>
+    <script src="utils/invokeAIAgent.js"></script>
+    <script type="text/babel" src="utils/aiAgent.js"></script>
+    <script type="text/babel" src="utils/auth.js"></script>
+    <script type="text/babel" src="utils/cart.js"></script>
+
+    <!-- Components depend on utils, load after them -->
     <script type="text/babel" src="components/Header.js"></script>
     <script type="text/babel" src="components/MobileNav.js"></script>
     <script type="text/babel" src="components/Hero.js"></script>
@@ -74,11 +86,7 @@
     <script type="text/babel" src="components/CartSidebar.js"></script>
     <script type="text/babel" src="components/AIChatSidebar.js"></script>
     <script type="text/babel" src="components/AuthModal.js"></script>
-    <script src="utils/trickleShim.js"></script>
-    <script src="utils/invokeAIAgent.js"></script>
-    <script type="text/babel" src="utils/aiAgent.js"></script>
-    <script type="text/babel" src="utils/auth.js"></script>
-    <script type="text/babel" src="utils/cart.js"></script>
+
     <script type="text/babel" src="app.js"></script>
 
 
