@@ -1,4 +1,12 @@
-const fetch = global.fetch || require('node-fetch');
+// Support both Node 18 global fetch and node-fetch
+let fetch;
+try {
+  // Try global fetch first (Node 18+)
+  fetch = global.fetch;
+} catch (e) {
+  // Fall back to node-fetch
+  fetch = require('node-fetch');
+}
 const { Pool } = require('pg');
 
 // Database URL (support common env names)

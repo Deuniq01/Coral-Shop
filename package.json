@@ -4,10 +4,12 @@
   "private": true,
   "dependencies": {
     "pg": "^8.11.0",
-    "csv-parse": "^5.4.0"
+    "csv-parse": "^5.4.0",
+    "node-fetch": "^2.6.9"
   },
   "scripts": {
-    "import-db": "node scripts/import_db.js"
+    "import-db": "node scripts/import_db.js",
+    "dev": "netlify dev"
   }
 }
 
