@@ -28,14 +28,13 @@ function Header({ user, cartCount, onCartClick, onAIChatClick, onAuthClick, onMe
               <button onClick={onAIChatClick} className="text-[var(--text-dark)] hover:text-[var(--primary-color)] transition-colors" title="AI Assistant">
                 <div className="icon-bot text-xl"></div>
               </button>
-              {user ? (
-                <button onClick={() => window.location.href = 'dashboard.html'} className="text-[var(--text-dark)] hover:text-[var(--primary-color)] transition-colors" title="My Account">
-                  <div className="icon-user text-xl"></div>
-                </button>
-              ) : (
-                // Show Google Sign-In button container; utils/auth.js will render into this if Google script and client id are present
-                <div id="gsiButton" style={{ display: 'inline-block' }} title="Sign in with Google"></div>
-              )}
+              <button 
+                onClick={() => user ? window.location.href = 'dashboard.html' : onAuthClick()} 
+                className="text-[var(--text-dark)] hover:text-[var(--primary-color)] transition-colors" 
+                title={user ? "My Account" : "Login / Sign Up"}
+              >
+                <div className="icon-user text-xl"></div>
+              </button>
               <button onClick={onCartClick} className="relative text-[var(--text-dark)] hover:text-[var(--primary-color)] transition-colors" title="Shopping Cart">
                 <div className="icon-shopping-cart text-xl"></div>
                 {cartCount > 0 && (

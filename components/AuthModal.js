@@ -4,6 +4,21 @@ function AuthModal({ show, onClose, onSuccess }) {
     const [formData, setFormData] = React.useState({ email: '', password: '', name: '' });
     const [error, setError] = React.useState('');
 
+    // Initialize Google Sign-In when modal shows
+    React.useEffect(() => {
+      if (show && window.google && window.initGoogleSignIn) {
+        // Add callback to handle successful sign-in
+        window.onAuthStateChanged = (user) => {
+          if (user) {
+            onSuccess(user);
+            onClose();
+          }
+        };
+        // Initialize Google Sign-In button
+        window.initGoogleSignIn();
+      }
+    }, [show, onSuccess, onClose]);
+
     const handleSubmit = async (e) => {
       e.preventDefault();
       setError('');
@@ -30,6 +45,17 @@ function AuthModal({ show, onClose, onSuccess }) {
           <button onClick={onClose} className="absolute top-4 right-4"><div className="icon-x text-xl text-[var(--text-dark)]"></div></button>
           <h2 className="text-2xl font-bold text-[var(--text-dark)] mb-6">{isLogin ? 'Login' : 'Sign Up'}</h2>
           {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
+          <div id="gsiButton" className="w-full flex justify-center mb-4"></div>
+          
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[var(--border-color)]"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 text-[var(--text-light)] bg-white">OR</span>
+            </div>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && <input type="text" placeholder="Full Name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required className="w-full px-4 py-3 border border-[var(--border-color)] rounded-lg focus:outline-none focus:border-[var(--primary-color)]" />}
             <input type="email" placeholder="Email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} required className="w-full px-4 py-3 border border-[var(--border-color)] rounded-lg focus:outline-none focus:border-[var(--primary-color)]" />
