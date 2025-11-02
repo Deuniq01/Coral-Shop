@@ -38,7 +38,7 @@ async function getAIRecommendationWithProducts(userQuery, chatHistory) {
     if (!response.ok) {
       throw new Error(`Failed to fetch products: ${response.status}`);
     }
-
+ 
     const data = await response.json();
     if (!data.items || data.items.length === 0) {
       return {
