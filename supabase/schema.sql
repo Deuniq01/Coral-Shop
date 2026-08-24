@@ -58,10 +58,10 @@ create table public.order_items (
   quantity integer not null check (quantity > 0),
   line_total numeric(12,2) not null check (line_total >= 0)
 );
-create type public.custom_request_status as enum ('new', 'contacted', 'fulfilled', 'cancelled');
+create type public.custom_request_status as enum ('new', 'contacted', 'closed');
 create table public.custom_requests (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references public.profiles(id) on delete set null,
+  user_id uuid not null references public.profiles(id) on delete cascade,
   name text not null,
   phone text not null,
   items text not null,
@@ -73,6 +73,7 @@ create table public.custom_requests (
 create index orders_user_created_idx on public.orders(user_id, created_at desc);
 create index products_active_idx on public.products(is_active);
 create index custom_requests_created_idx on public.custom_requests(created_at desc);
+create index custom_requests_user_idx on public.custom_requests(user_id, created_at desc);
 
 create or replace function public.is_admin() returns boolean language sql stable security definer set search_path = public as $$
   select exists(select 1 from public.profiles where id = auth.uid() and role = 'admin');
@@ -133,36 +134,27 @@ begin
   update public.orders set status = next_status, delivery_scheduled_at = coalesce(scheduled_at, delivery_scheduled_at), delivery_note = coalesce(note, delivery_note), updated_at = now() where id = order_id;
 end; $$;
 
--- Public custom shopping requests: validated server-side, readable by admins only.
-create or replace function public.create_custom_request(payload jsonb)
-returns uuid language plpgsql security definer set search_path = public as $$
+create or replace function public.custom_request_validate()
+returns trigger language plpgsql security definer set search_path = public as $$
 declare
-  req_id uuid;
-  nm text := trim(coalesce(payload->>'name', ''));
-  ph text := trim(coalesce(payload->>'phone', ''));
-  it text := trim(coalesce(payload->>'items', ''));
-  bd text := nullif(trim(coalesce(payload->>'budget', '')), '');
+  nm text := trim(coalesce(new.name, ''));
+  ph text := trim(coalesce(new.phone, ''));
+  it text := trim(coalesce(new.items, ''));
+  bd text := nullif(trim(coalesce(new.budget, '')), '');
 begin
+  if auth.uid() is null then raise exception 'Sign in is required'; end if;
+  if not public.is_admin() then new.user_id := auth.uid(); end if;
+  if new.user_id is null then new.user_id := auth.uid(); end if;
   if length(nm) < 2 or length(nm) > 80 then raise exception 'Please enter your name'; end if;
-  if length(ph) < 7 or length(ph) > 20 then raise exception 'Please enter a valid phone number'; end if;
-  if ph !~ '^[0-9+()[:space:]-]+$' then raise exception 'Please enter a valid phone number'; end if;
+  if length(ph) < 7 or length(ph) > 20 or ph !~ '^[0-9+()[:space:]-]+$' then raise exception 'Please enter a valid phone number'; end if;
   if length(it) < 3 or length(it) > 2000 then raise exception 'Please describe the items you need'; end if;
   if bd is not null and length(bd) > 80 then raise exception 'Budget is too long'; end if;
-  insert into public.custom_requests(user_id, name, phone, items, budget)
-  values (auth.uid(), nm, ph, it, bd)
-  returning id into req_id;
-  return req_id;
+  new.name := nm; new.phone := ph; new.items := it; new.budget := bd;
+  if tg_op = 'INSERT' then new.status := 'new'; end if;
+  return new;
 end; $$;
-
-create or replace function public.update_custom_request(request_id uuid, next_status public.custom_request_status, note text default null)
-returns void language plpgsql security definer set search_path = public as $$
-begin
-  if not public.is_admin() then raise exception 'Admin access required'; end if;
-  update public.custom_requests
-    set status = next_status, admin_note = coalesce(note, admin_note)
-    where id = request_id;
-  if not found then raise exception 'Custom request not found'; end if;
-end; $$;
+create trigger custom_request_validate before insert on public.custom_requests
+  for each row execute procedure public.custom_request_validate();
 
 alter table public.profiles enable row level security;
 alter table public.categories enable row level security;

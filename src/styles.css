@@ -1,13 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
 
 :root {
-  --primary: #3538a0;
-  --secondary: #fff9e5;
-  --accent: #ffcb05;
-  --ink: #2c3e50;
-  --muted: #7f8c8d;
-  --line: #f0e8ec;
-  --cream: #fff9e5;
+  --primary: #3538A0;
+  --accent: #FFCB05;
+  --ink: #2C3E50;
+  --muted: #7F8C8D;
+  --line: #F0E8EC;
+  --secondary: #FFF8D6;
 }
 
 * { box-sizing: border-box; }
@@ -329,7 +328,7 @@ textarea { min-height: 90px; resize: vertical; }
 .status.shipped { background: #e8efff; color: #384d9e; }
 .status.new { background: #fff3c4; color: #7a5b00; }
 .status.contacted { background: #e4e8ff; color: #2a3590; }
-.status.fulfilled { background: #e4f5e9; color: #17603d; }
+.status.closed { background: #e4f5e9; color: #17603d; }
 
 .admin-action {
   display: flex;

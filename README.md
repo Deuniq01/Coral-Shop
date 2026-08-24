@@ -53,7 +53,7 @@ Refresh the application. The **Admin** link is shown only after the authenticate
 1. Signed-in customer submits delivery details and places an order.
 2. The database sets it to `awaiting_payment`; product prices and stock are validated server-side.
 3. Customer makes the manual payment and clicks **I've made payment**. The status becomes `pending`.
-4. An administrator selects delivery date/time and clicks **Payment received — mark paid**. The status becomes `paid` and the customer sees the planned delivery in their order history.
+4. An administrator selects delivery date/time and clicks **Payment received - mark paid**. The status becomes `paid` and the customer sees the planned delivery in their order history.
 5. Admin progresses fulfillment through `processing`, `shipped`, and `delivered`.
 
 No payment provider is simulated and no client can mark an order paid.
