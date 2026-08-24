@@ -65,6 +65,9 @@ No payment provider is simulated and no client can mark an order paid.
 - RLS lets customers read only their own orders and order items.
 - Catalog reads are public; product writes are admin-only.
 - `create_order`, `submit_payment`, `confirm_payment`, and fulfillment updates are controlled SQL functions that enforce ownership, pricing, stock, and roles on the server.
+- Custom “Shop Your Way” requests go through `create_custom_request`. Fields are validated in Postgres; only administrators can read or update them.
+
+If the store schema is already applied, run `supabase/custom_requests.sql` once to add the custom-order tables and functions.
 
 ## Production checklist
 

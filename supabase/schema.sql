@@ -58,8 +58,21 @@ create table public.order_items (
   quantity integer not null check (quantity > 0),
   line_total numeric(12,2) not null check (line_total >= 0)
 );
+create type public.custom_request_status as enum ('new', 'contacted', 'fulfilled', 'cancelled');
+create table public.custom_requests (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references public.profiles(id) on delete set null,
+  name text not null,
+  phone text not null,
+  items text not null,
+  budget text,
+  status public.custom_request_status not null default 'new',
+  admin_note text,
+  created_at timestamptz not null default now()
+);
 create index orders_user_created_idx on public.orders(user_id, created_at desc);
 create index products_active_idx on public.products(is_active);
+create index custom_requests_created_idx on public.custom_requests(created_at desc);
 
 create or replace function public.is_admin() returns boolean language sql stable security definer set search_path = public as $$
   select exists(select 1 from public.profiles where id = auth.uid() and role = 'admin');
@@ -120,11 +133,43 @@ begin
   update public.orders set status = next_status, delivery_scheduled_at = coalesce(scheduled_at, delivery_scheduled_at), delivery_note = coalesce(note, delivery_note), updated_at = now() where id = order_id;
 end; $$;
 
+-- Public custom shopping requests: validated server-side, readable by admins only.
+create or replace function public.create_custom_request(payload jsonb)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare
+  req_id uuid;
+  nm text := trim(coalesce(payload->>'name', ''));
+  ph text := trim(coalesce(payload->>'phone', ''));
+  it text := trim(coalesce(payload->>'items', ''));
+  bd text := nullif(trim(coalesce(payload->>'budget', '')), '');
+begin
+  if length(nm) < 2 or length(nm) > 80 then raise exception 'Please enter your name'; end if;
+  if length(ph) < 7 or length(ph) > 20 then raise exception 'Please enter a valid phone number'; end if;
+  if ph !~ '^[0-9+()[:space:]-]+$' then raise exception 'Please enter a valid phone number'; end if;
+  if length(it) < 3 or length(it) > 2000 then raise exception 'Please describe the items you need'; end if;
+  if bd is not null and length(bd) > 80 then raise exception 'Budget is too long'; end if;
+  insert into public.custom_requests(user_id, name, phone, items, budget)
+  values (auth.uid(), nm, ph, it, bd)
+  returning id into req_id;
+  return req_id;
+end; $$;
+
+create or replace function public.update_custom_request(request_id uuid, next_status public.custom_request_status, note text default null)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_admin() then raise exception 'Admin access required'; end if;
+  update public.custom_requests
+    set status = next_status, admin_note = coalesce(note, admin_note)
+    where id = request_id;
+  if not found then raise exception 'Custom request not found'; end if;
+end; $$;
+
 alter table public.profiles enable row level security;
 alter table public.categories enable row level security;
 alter table public.products enable row level security;
 alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
+alter table public.custom_requests enable row level security;
 create policy "profiles are private" on public.profiles for select using (id = auth.uid() or public.is_admin());
 create policy "public catalog" on public.categories for select using (true);
 create policy "public active products" on public.products for select using (is_active or public.is_admin());
@@ -132,6 +177,9 @@ create policy "admins manage categories" on public.categories for all using (pub
 create policy "admins manage products" on public.products for all using (public.is_admin()) with check (public.is_admin());
 create policy "users see own orders" on public.orders for select using (user_id = auth.uid() or public.is_admin());
 create policy "users see own order items" on public.order_items for select using (exists(select 1 from public.orders o where o.id = order_id and (o.user_id = auth.uid() or public.is_admin())));
+create policy "admins read custom requests" on public.custom_requests for select using (public.is_admin());
+grant execute on function public.create_custom_request(jsonb) to anon, authenticated;
+grant execute on function public.update_custom_request(uuid, public.custom_request_status, text) to authenticated;
 
 -- Seed categories. Import database/product.csv through Supabase's Table Editor after creating matching categories,
 -- or use the importer documented in README.
