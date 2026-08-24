@@ -53,7 +53,7 @@ Refresh the application. The **Admin** link is shown only after the authenticate
 1. Signed-in customer submits delivery details and places an order.
 2. The database sets it to `awaiting_payment`; product prices and stock are validated server-side.
 3. Customer makes the manual payment and clicks **I've made payment**. The status becomes `pending`.
-4. An administrator selects delivery date/time and clicks **Payment received — mark paid**. The status becomes `paid` and the customer sees the planned delivery in their order history.
+4. An administrator selects delivery date/time and clicks **Payment received - mark paid**. The status becomes `paid` and the customer sees the planned delivery in their order history.
 5. Admin progresses fulfillment through `processing`, `shipped`, and `delivered`.
 
 No payment provider is simulated and no client can mark an order paid.
@@ -65,6 +65,9 @@ No payment provider is simulated and no client can mark an order paid.
 - RLS lets customers read only their own orders and order items.
 - Catalog reads are public; product writes are admin-only.
 - `create_order`, `submit_payment`, `confirm_payment`, and fulfillment updates are controlled SQL functions that enforce ownership, pricing, stock, and roles on the server.
+- Custom “Shop Your Way” requests go through `create_custom_request`. Fields are validated in Postgres; only administrators can read or update them.
+
+If the store schema is already applied, run `supabase/custom_requests.sql` once to add the custom-order tables and functions.
 
 ## Production checklist
 
