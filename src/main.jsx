@@ -45,7 +45,7 @@ function Header(){
       <nav className={menuOpen?'open':''}>
         <NavLink to="/products" onClick={()=>setMenuOpen(false)}>Shop</NavLink>
         <a href="/#custom-shop" onClick={()=>setMenuOpen(false)}>Custom shop</a>
-        {session&&<NavLink to="/orders" onClick={()=>setMenuOpen(false)}>My orders</NavLink>}
+        {session&&<NavLink to="/dashboard" onClick={()=>setMenuOpen(false)}>Dashboard</NavLink>}
         {profile?.role==='admin'&&<NavLink to="/admin" onClick={()=>setMenuOpen(false)}>Admin</NavLink>}
       </nav>
       <div className="header-actions">
@@ -61,7 +61,7 @@ function Footer(){
       <div className="footer-grid">
         <div>
           <img className="footer-logo" src={brand.logo} alt="Coral Shopping" />
-          <p className="footer-tag">Quality foodstuffs, gift hampers and household essentials, delivered across Lagos.</p>
+          <p className="footer-tag">Quality foodstuffs, gift hampers and household essentials, delivered across Abeokuta.</p>
         </div>
         <div>
           <h4>Shop</h4>
@@ -84,14 +84,17 @@ function Footer(){
 function ChatLauncher(){
   const {add}=useCart();
   const [open,setOpen]=useState(false);
-  const [messages,setMessages]=useState([{role:'bot',text:'Hi, I am the Coral Shopping assistant. Ask me about products, delivery, payments, or tell me what you need and I will point you to it.'}]);
+  const [showPopup,setShowPopup]=useState(()=>{ try { return localStorage.getItem('coral-chat-popup')!=='hidden'; } catch { return true; } });
+  const [messages,setMessages]=useState([{role:'bot',text:'Hey! I am Coral\'s assistant. Ask me about products, delivery in Abeokuta, or anything you need and I will help you out.'}]);
   const [input,setInput]=useState('');
   const [busy,setBusy]=useState(false);
   const [products,setProducts]=useState(sampleProducts);
   const bodyRef=useRef(null);
-  const suggestions=['What can you help with?','Recommend a gift hamper','How does delivery work?','Add rice to cart'];
+  const suggestions=['What can you help me find?','I need a gift hamper','How does delivery work?','Add rice to my cart'];
   useEffect(()=>{ if(supabase){ supabase.from('products').select('*, category:categories(name,slug)').eq('is_active',true).order('created_at',{ascending:false}).then(({data})=>{ if(data&&data.length) setProducts(data); }); } },[]);
   useEffect(()=>{ if(bodyRef.current) bodyRef.current.scrollTop=bodyRef.current.scrollHeight; },[messages,open,busy]);
+  const dismissPopup=()=>{ setShowPopup(false); try { localStorage.setItem('coral-chat-popup','hidden'); } catch {} };
+  const openChat=()=>{ setShowPopup(false); setOpen(true); };
   const send=async raw=>{
     const text=(raw||'').trim(); if(!text||busy) return;
     setInput(''); setMessages(m=>[...m,{role:'user',text}]); setBusy(true);
@@ -102,7 +105,12 @@ function ChatLauncher(){
   };
   return (
     <>
-      {!open && <button className="chat-fab" aria-label="Open chat" onClick={()=>setOpen(true)}>
+      {!open && showPopup && <div className="chat-popup" role="dialog" aria-label="Coral assistant">
+        <button className="chat-popup-close" aria-label="Dismiss" onClick={dismissPopup}>×</button>
+        <p>Hi! I am Coral's assistant. Ask me about products, delivery in Abeokuta, or anything you need.</p>
+        <button className="chat-popup-open" onClick={openChat}>Chat with me</button>
+      </div>}
+      {!open && <button className="chat-fab" aria-label="Open chat" onClick={openChat}>
         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5z"/></svg>
       </button>}
       {open && <section className="chat-panel" aria-label="Coral Shopping assistant">
@@ -223,11 +231,62 @@ function StockWall(){
     </section>
   );
 }
-function Home(){return <Layout><section className="hero"><div className="hero-copy"><p className="eyebrow">Lagos grocery and gift store</p><h1>Quality foodstuffs, gifts and household essentials, delivered to your door.</h1><p>Coral Shopping brings the market to you. Stock your kitchen, send a gift hamper, or tell us what you need and we will source it for you.</p><div className="hero-actions"><Link className="button" to="/products">Shop now</Link><a className="button secondary" href="#custom-shop">Shop your way</a></div></div><div className="hero-art"><img src={heroImage} alt="Coral Shopping groceries and household items" loading="lazy"/></div></section><div className="home-below"><AisleCards/><Products featured/><CustomShopForm/><StockWall/></div><section className="callout"><div><p className="eyebrow">Need a hand?</p><h2>Chat with us on WhatsApp for quick orders and delivery questions.</h2></div><a className="button secondary" href="https://wa.me/2349061965441" target="_blank" rel="noreferrer">Chat on WhatsApp</a></section></Layout>}
+function Home(){return <Layout><section className="hero"><div className="hero-copy"><p className="eyebrow">Abeokuta grocery and gift store</p><h1>Quality foodstuffs, gifts and household essentials, delivered to your door.</h1><p>Coral Shopping brings the market to you. Stock your kitchen, send a gift hamper, or tell us what you need and we will source it for you.</p><div className="hero-actions"><Link className="button" to="/products">Shop now</Link><a className="button secondary" href="#custom-shop">Shop your way</a></div></div><div className="hero-art"><img src={heroImage} alt="Coral Shopping groceries and household items" loading="lazy"/></div></section><div className="home-below"><AisleCards/><Products featured/><CustomShopForm/><StockWall/></div><section className="callout"><div><p className="eyebrow">Need a hand?</p><h2>Chat with us on WhatsApp for quick orders and delivery questions.</h2></div><a className="button secondary" href="https://wa.me/2349061965441" target="_blank" rel="noreferrer">Chat on WhatsApp</a></section></Layout>}
 function RequireAuth({children}){const {session,loading}=useAuth();if(loading)return <Layout><p>Loading…</p></Layout>;return session?children:<Navigate to="/sign-in" replace/>}
-function Checkout(){const {items,update,clear}=useCart();const {profile}=useAuth();const nav=useNavigate();const [shipping,setShipping]=useState({name:profile?.full_name||'',phone:profile?.phone||'',address:'',city:'Lagos',state:'Lagos'}),[msg,setMsg]=useState(''),[busy,setBusy]=useState(false);const subtotal=items.reduce((s,i)=>s+i.price*i.quantity,0),fee=2000;const submit=async e=>{e.preventDefault();if(!items.length)return;setBusy(true);const {data,error}=await supabase.rpc('create_order',{items:items.map(i=>({productId:i.id,quantity:i.quantity})),shipping});setBusy(false);if(error)return setMsg(error.message);clear();nav(`/orders?created=${data}`)};return <RequireAuth><Layout><section className="checkout"><div><p className="eyebrow">Delivery details</p><h1>Where should we deliver?</h1>{msg&&<Notice kind="error">{msg}</Notice>}<form className="card" onSubmit={submit}><div className="two"><label>Full name<input required value={shipping.name} onChange={e=>setShipping({...shipping,name:e.target.value})}/></label><label>Phone<input required value={shipping.phone} onChange={e=>setShipping({...shipping,phone:e.target.value})}/></label></div><label>Delivery address<textarea required value={shipping.address} onChange={e=>setShipping({...shipping,address:e.target.value})}/></label><div className="two"><label>City<input required value={shipping.city} onChange={e=>setShipping({...shipping,city:e.target.value})}/></label><label>State<input required value={shipping.state} onChange={e=>setShipping({...shipping,state:e.target.value})}/></label></div><h3>Payment method</h3><Notice>Bank-transfer payment instructions will be shared after you place this order. Your order stays <b>awaiting payment</b> until you confirm “I’ve made payment.”</Notice><button disabled={busy||!items.length}>{busy?'Creating order…':'Place order'}</button></form></div><CartSummary items={items} update={update} subtotal={subtotal} fee={fee}/></section></Layout></RequireAuth>}
+function Checkout(){const {items,update,clear}=useCart();const {profile}=useAuth();const nav=useNavigate();const [shipping,setShipping]=useState({name:profile?.full_name||'',phone:profile?.phone||'',address:'',city:'Abeokuta',state:'Ogun'}),[msg,setMsg]=useState(''),[busy,setBusy]=useState(false);const subtotal=items.reduce((s,i)=>s+i.price*i.quantity,0),fee=2000;const submit=async e=>{e.preventDefault();if(!items.length)return;setBusy(true);const {data,error}=await supabase.rpc('create_order',{items:items.map(i=>({productId:i.id,quantity:i.quantity})),shipping});setBusy(false);if(error)return setMsg(error.message);clear();nav(`/orders?created=${data}`)};return <RequireAuth><Layout><section className="checkout"><div><p className="eyebrow">Delivery details</p><h1>Where should we deliver?</h1>{msg&&<Notice kind="error">{msg}</Notice>}<form className="card" onSubmit={submit}><div className="two"><label>Full name<input required value={shipping.name} onChange={e=>setShipping({...shipping,name:e.target.value})}/></label><label>Phone<input required value={shipping.phone} onChange={e=>setShipping({...shipping,phone:e.target.value})}/></label></div><label>Delivery address<textarea required value={shipping.address} onChange={e=>setShipping({...shipping,address:e.target.value})}/></label><div className="two"><label>City<input required value={shipping.city} onChange={e=>setShipping({...shipping,city:e.target.value})}/></label><label>State<input required value={shipping.state} onChange={e=>setShipping({...shipping,state:e.target.value})}/></label></div><h3>Payment method</h3><Notice>Bank-transfer payment instructions will be shared after you place this order. Your order stays <b>awaiting payment</b> until you confirm “I’ve made payment.”</Notice><button disabled={busy||!items.length}>{busy?'Creating order…':'Place order'}</button></form></div><CartSummary items={items} update={update} subtotal={subtotal} fee={fee}/></section></Layout></RequireAuth>}
 function CartSummary({items,update,subtotal,fee}){return <aside className="summary card"><h2>Your order</h2>{items.map(i=><div className="line cart-line" key={i.id}><img className="cart-thumb" src={productImage(i)} alt={i.name||''} loading="lazy"/><span className="cart-info">{i.name}<small>{money(i.price)} × <input aria-label="quantity" type="number" min="1" value={i.quantity} onChange={e=>update(i.id,Number(e.target.value))}/></small></span><b>{money(i.price*i.quantity)}</b></div>)}<hr/><div className="line"><span>Subtotal</span><b>{money(subtotal)}</b></div><div className="line"><span>Delivery</span><b>{money(fee)}</b></div><div className="line total"><span>Total</span><b>{money(subtotal+fee)}</b></div></aside>}
 function Orders(){const [orders,setOrders]=useState([]),[loading,setLoading]=useState(true),[msg,setMsg]=useState('');const load=()=>supabase.from('orders').select('*, order_items(*)').order('created_at',{ascending:false}).then(({data,error})=>{setOrders(data||[]);setMsg(error?.message||'');setLoading(false)});useEffect(load,[]);const submitted=async id=>{const {error}=await supabase.rpc('submit_payment',{order_id:id});if(error)setMsg(error.message);else {setMsg('Payment submitted. We will confirm it shortly.');load();}};return <RequireAuth><Layout><section className="section"><p className="eyebrow">Your orders</p><h1>My orders</h1>{msg&&<Notice kind={msg.includes('submitted')?'success':'error'}>{msg}</Notice>}{loading?<p>Loading orders…</p>:!orders.length?<Notice>You have no orders yet. <Link to="/products">Start shopping.</Link></Notice>:<div className="orders">{orders.map(o=><article className="order card" key={o.id}><div className="order-head"><div><span className={'status '+o.status}>{o.status.replace('_',' ')}</span><h3>Order #{o.id.slice(0,8)}</h3><small>{dateTime(o.created_at)}</small></div><b>{money(o.total)}</b></div>{o.order_items.map(i=><p key={i.id}>{i.product_name} × {i.quantity} <span>{money(i.line_total)}</span></p>)}<hr/><p><b>Delivery:</b> {o.shipping_address}, {o.shipping_city}, {o.shipping_state}</p>{o.status==='awaiting_payment'&&<><Notice>Make your transfer using the instructions provided by the Coral Shop team, then confirm below. We will verify the payment before dispatch.</Notice><button onClick={()=>submitted(o.id)}>I've made payment</button></>}{o.delivery_scheduled_at&&<Notice kind="success"><b>Delivery scheduled:</b> {dateTime(o.delivery_scheduled_at)}{o.delivery_note&&` · ${o.delivery_note}`}</Notice>}</article>)}</div>}</section></Layout></RequireAuth>}
+function Dashboard(){
+  const {session,profile,signOut}=useAuth();
+  const [orders,setOrders]=useState([]);
+  const [requests,setRequests]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const load=async()=>{
+    if(!session) return;
+    const [{data:o},{data:r}]=await Promise.all([
+      supabase.from('orders').select('*, order_items(*)').order('created_at',{ascending:false}),
+      supabase.from('custom_requests').select('*').order('created_at',{ascending:false})
+    ]);
+    setOrders(o||[]); setRequests(r||[]); setLoading(false);
+  };
+  useEffect(()=>{ if(!supabase){setLoading(false);return;} load(); },[session]);
+  const name=profile?.full_name||session?.user?.email?.split('@')[0]||'there';
+  const active=orders.filter(o=>!['delivered','closed','cancelled'].includes(o.status)).length;
+  return <RequireAuth><Layout><section className="section dashboard">
+    <div className="section-title"><div><p className="eyebrow">Your dashboard</p><h1>Welcome back, {name}</h1></div></div>
+    <div className="dash-stats">
+      <div className="stat card"><strong>{orders.length}</strong><span>Orders placed</span></div>
+      <div className="stat card"><strong>{active}</strong><span>Active orders</span></div>
+      <div className="stat card"><strong>{requests.length}</strong><span>Custom requests</span></div>
+    </div>
+    <div className="dash-grid">
+      <div className="dash-col">
+        <h2>Recent orders</h2>
+        {loading?<p>Loading…</p>:!orders.length?<p className="muted">No orders yet. <Link to="/products">Start shopping.</Link></p>:<>
+          <div className="orders">{orders.slice(0,5).map(o=><article className="order card" key={o.id}>
+            <div className="order-head"><div><span className={'status '+o.status}>{o.status.replace('_',' ')}</span><h3>Order #{o.id.slice(0,8)}</h3><small>{dateTime(o.created_at)}</small></div><b>{money(o.total)}</b></div>
+            <p>{o.order_items?.length||0} item(s)</p>
+          </article>)}</div>
+          <Link className="button small" to="/orders" style={{marginTop:14}}>View all orders</Link>
+        </>}
+      </div>
+      <div className="dash-col">
+        <h2>Your custom requests</h2>
+        {loading?<p>Loading…</p>:!requests.length?<p className="muted">Nothing yet. <a href="/#custom-shop">Send a request.</a></p>:<>
+          <div className="orders">{requests.slice(0,5).map(r=><article className="order card" key={r.id}>
+            <div className="order-head"><div><span className={'status '+r.status}>{r.status}</span><h3>{r.name}</h3><small>{dateTime(r.created_at)}</small></div>{r.budget&&<b>{r.budget}</b>}</div>
+            <p style={{display:'block'}}>{(r.items||'').slice(0,90)}{(r.items||'').length>90?'…':''}</p>
+          </article>)}</div>
+          <a className="button small secondary" href="/#custom-shop" style={{marginTop:14}}>New request</a>
+        </>}
+      </div>
+    </div>
+    <div className="dash-actions">
+      <Link className="button" to="/products">Continue shopping</Link>
+      <button className="button secondary" onClick={signOut}>Sign out</button>
+    </div>
+  </section></Layout></RequireAuth>;
+}
 function Admin(){const {profile}=useAuth();if(profile?.role!=='admin')return <Navigate to="/" replace/>;return <AdminPanel/>}
 function AdminPanel(){const [tab,setTab]=useState('orders'),[orders,setOrders]=useState([]),[products,setProducts]=useState([]),[requests,setRequests]=useState([]),[msg,setMsg]=useState('');const load=async()=>{const [{data:o},{data:p},{data:r}]=await Promise.all([supabase.from('orders').select('*, profiles(full_name,email), order_items(*)').order('created_at',{ascending:false}),supabase.from('products').select('*, category:categories(name,slug)').order('created_at',{ascending:false}),supabase.from('custom_requests').select('*').order('created_at',{ascending:false})]);setOrders(o||[]);setProducts(p||[]);setRequests(r||[])};useEffect(()=>{load()},[]);return <Layout><section className="section"><p className="eyebrow">Store control</p><h1>Store control centre</h1><div className="tabs"><button className={tab==='orders'?'selected':''} onClick={()=>setTab('orders')}>Orders</button><button className={tab==='custom'?'selected':''} onClick={()=>setTab('custom')}>Custom requests</button><button className={tab==='products'?'selected':''} onClick={()=>setTab('products')}>Products</button></div>{msg&&<Notice kind="success">{msg}</Notice>}{tab==='orders'?<AdminOrders orders={orders} reload={load} message={setMsg}/>:tab==='custom'?<AdminCustomRequests requests={requests} reload={load} message={setMsg}/>:<AdminProducts products={products} reload={load} message={setMsg}/>}</section></Layout>}
 function AdminCustomRequests({requests,reload,message}){
@@ -242,4 +301,4 @@ function AdminCustomRequests({requests,reload,message}){
 }
 function AdminOrders({orders,reload,message}){const [details,setDetails]=useState({});const confirm=async id=>{const d=details[id]||{};const {error}=await supabase.rpc('confirm_payment',{order_id:id,scheduled_at:d.date?new Date(d.date).toISOString():null,note:d.note||null});if(error)return alert(error.message);message('Payment confirmed and delivery information saved.');reload()};const fulfill=async(id,status)=>{const {error}=await supabase.rpc('update_order_fulfillment',{order_id:id,next_status:status,scheduled_at:null,note:null});if(error)return alert(error.message);message('Order status updated.');reload()};return <div className="orders">{orders.map(o=><article className="order card" key={o.id}><div className="order-head"><div><span className={'status '+o.status}>{o.status.replace('_',' ')}</span><h3>#{o.id.slice(0,8)} · {o.profiles?.full_name||'Customer'}</h3><small>{o.profiles?.email} · {o.shipping_phone}</small></div><b>{money(o.total)}</b></div><p>{o.shipping_address}, {o.shipping_city}, {o.shipping_state}</p>{o.order_items.map(i=><p key={i.id}>{i.product_name} × {i.quantity}</p>)}{o.status==='pending'&&<div className="admin-action"><label>Delivery date & time<input type="datetime-local" onChange={e=>setDetails({...details,[o.id]:{...(details[o.id]||{}),date:e.target.value}})}/></label><label>Delivery note<input placeholder="Optional note" onChange={e=>setDetails({...details,[o.id]:{...(details[o.id]||{}),note:e.target.value}})}/></label><button onClick={()=>confirm(o.id)}>Payment received - mark paid</button></div>}{['paid','processing','shipped'].includes(o.status)&&<div className="admin-action"><button onClick={()=>fulfill(o.id,o.status==='paid'?'processing':o.status==='processing'?'shipped':'delivered')}>Mark {o.status==='paid'?'processing':o.status==='processing'?'shipped':'delivered'}</button>{o.delivery_scheduled_at&&<small>Scheduled: {dateTime(o.delivery_scheduled_at)}</small>}</div>}</article>)}</div>}
 function AdminProducts({products,reload,message}){const initial={name:'',price:'',category:'foodstuffs',description:'',image_url:'',stock_quantity:'0'};const [form,setForm]=useState(initial);const [editing,setEditing]=useState(null);const save=async e=>{e.preventDefault();const {data:cat}=await supabase.from('categories').select('id').eq('slug',form.category).single();const record={name:form.name,slug:slugify(form.name),price:Number(form.price),description:form.description,image_url:form.image_url,stock_quantity:Number(form.stock_quantity),category_id:cat?.id};const result=editing?await supabase.from('products').update(record).eq('id',editing):await supabase.from('products').insert(record);if(result.error)return alert(result.error.message);setForm(initial);setEditing(null);message('Product saved.');reload()};return <div className="admin-products"><form className="card product-form" onSubmit={save}><h2>{editing?'Edit product':'Add product'}</h2><div className="two"><label>Name<input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label><label>Price<input required type="number" min="0" value={form.price} onChange={e=>setForm({...form,price:e.target.value})}/></label></div><div className="two"><label>Category<select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}>{['foodstuffs','gifts','household'].map(x=><option key={x}>{x}</option>)}</select></label><label>Stock quantity<input type="number" min="0" value={form.stock_quantity} onChange={e=>setForm({...form,stock_quantity:e.target.value})}/></label></div><label>Image URL<input value={form.image_url} onChange={e=>setForm({...form,image_url:e.target.value})}/></label><label>Description<textarea required value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/></label><button>{editing?'Save changes':'Add product'}</button>{editing&&<button type="button" className="secondary" onClick={()=>{setEditing(null);setForm(initial)}}>Cancel</button>}</form><div className="product-table card">{products.map(p=><div key={p.id}><img className="admin-thumb" src={productImage(p)} alt={p.name||''} loading="lazy"/><span>{p.name}<small>{p.category?.name} · {p.stock_quantity} in stock</small></span><b>{money(p.price)}</b><button className="secondary" onClick={()=>{setEditing(p.id);setForm({...p,category:p.category?.slug||'foodstuffs'})}}>Edit</button></div>)}</div></div>}
-function App(){return <AuthProvider><CartProvider><BrowserRouter><Routes><Route path="/" element={<Home/>}/><Route path="/products" element={<Layout><Products/></Layout>}/><Route path="/sign-in" element={<SignIn/>}/><Route path="/checkout" element={<Checkout/>}/><Route path="/orders" element={<Orders/>}/><Route path="/admin" element={<Admin/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes></BrowserRouter></CartProvider></AuthProvider>};createRoot(document.getElementById('root')).render(<App/>);
+function App(){return <AuthProvider><CartProvider><BrowserRouter><Routes><Route path="/" element={<Home/>}/><Route path="/products" element={<Layout><Products/></Layout>}/><Route path="/sign-in" element={<SignIn/>}/><Route path="/checkout" element={<Checkout/>}/><Route path="/orders" element={<Orders/>}/><Route path="/dashboard" element={<Dashboard/>}/><Route path="/admin" element={<Admin/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes></BrowserRouter></CartProvider></AuthProvider>};createRoot(document.getElementById('root')).render(<App/>);
