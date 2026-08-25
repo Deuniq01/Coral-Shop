@@ -4,6 +4,7 @@ import { BrowserRouter, Link, NavLink, Navigate, Route, Routes, useNavigate, use
 import { createClient } from '@supabase/supabase-js';
 import './styles.css';
 import { brand, heroImage, aisles, stockWall, productImage, sampleProducts } from './media.js';
+import { assistantReply } from './assistant.js';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -80,7 +81,65 @@ function Footer(){
     </footer>
   );
 }
-function Layout({children}){return <><Header/><main>{children}</main><Footer/></>}
+function ChatLauncher(){
+  const {add}=useCart();
+  const [open,setOpen]=useState(false);
+  const [messages,setMessages]=useState([{role:'bot',text:'Hi, I am the Coral Shopping assistant. Ask me about products, delivery, payments, or tell me what you need and I will point you to it.'}]);
+  const [input,setInput]=useState('');
+  const [busy,setBusy]=useState(false);
+  const [products,setProducts]=useState(sampleProducts);
+  const bodyRef=useRef(null);
+  const suggestions=['What can you help with?','Recommend a gift hamper','How does delivery work?','Add rice to cart'];
+  useEffect(()=>{ if(supabase){ supabase.from('products').select('*, category:categories(name,slug)').eq('is_active',true).order('created_at',{ascending:false}).then(({data})=>{ if(data&&data.length) setProducts(data); }); } },[]);
+  useEffect(()=>{ if(bodyRef.current) bodyRef.current.scrollTop=bodyRef.current.scrollHeight; },[messages,open,busy]);
+  const send=async raw=>{
+    const text=(raw||'').trim(); if(!text||busy) return;
+    setInput(''); setMessages(m=>[...m,{role:'user',text}]); setBusy(true);
+    const reply=await assistantReply(text,{catalog:products});
+    if(reply.add) add(reply.add);
+    setMessages(m=>[...m,{role:'bot',text:reply.text,products:reply.products}]);
+    setBusy(false);
+  };
+  return (
+    <>
+      {!open && <button className="chat-fab" aria-label="Open chat" onClick={()=>setOpen(true)}>
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5z"/></svg>
+      </button>}
+      {open && <section className="chat-panel" aria-label="Coral Shopping assistant">
+        <header className="chat-header">
+          <img src={brand.logo} alt="Coral Shopping" />
+          <div><strong>Coral Assistant</strong><small>Online now</small></div>
+          <button className="chat-close" aria-label="Close chat" onClick={()=>setOpen(false)}>×</button>
+        </header>
+        <div className="chat-body" ref={bodyRef}>
+          {messages.map((m,idx)=>(
+            <div key={idx} className={'chat-msg '+(m.role==='user'?'user':'bot')}>
+              <div className="bubble">{m.text}</div>
+              {m.products&&<div className="chat-products">
+                {m.products.map(p=><div className="chat-product" key={p.id||p.name}>
+                  <img src={productImage(p)} alt={p.name||''} loading="lazy"/>
+                  <div><span>{p.name}</span><small>{money(p.price)}</small></div>
+                  <button onClick={()=>add(p)}>Add</button>
+                </div>)}
+              </div>}
+            </div>
+          ))}
+          {busy && <div className="chat-msg bot"><div className="bubble typing"><span></span><span></span><span></span></div></div>}
+        </div>
+        {messages.length<=1 && <div className="chat-suggestions">
+          {suggestions.map(s=><button key={s} onClick={()=>send(s)}>{s}</button>)}
+        </div>}
+        <form className="chat-input" onSubmit={e=>{e.preventDefault();send(input)}}>
+          <input value={input} onChange={e=>setInput(e.target.value)} placeholder="Ask about a product or delivery" aria-label="Message"/>
+          <button type="submit" aria-label="Send" disabled={busy||!input.trim()}>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
+          </button>
+        </form>
+      </section>}
+    </>
+  );
+}
+function Layout({children}){return <><Header/><main>{children}</main><Footer/><ChatLauncher/></>}
 function Notice({children,kind='info'}){return <div className={'notice '+kind}>{children}</div>}
 
 function SignIn(){const nav=useNavigate();const [mode,setMode]=useState('signIn'),[form,setForm]=useState({name:'',email:'',password:''}),[msg,setMsg]=useState(''),[busy,setBusy]=useState(false);if(!configured)return <Setup/>; const submit=async e=>{e.preventDefault();setBusy(true);setMsg('');let result;if(mode==='signIn')result=await supabase.auth.signInWithPassword({email:form.email,password:form.password});else result=await supabase.auth.signUp({email:form.email,password:form.password,options:{data:{full_name:form.name},emailRedirectTo:window.location.origin}});setBusy(false);if(result.error)return setMsg(result.error.message);if(mode==='signUp')setMsg('Check your email to confirm your account, then sign in.');else nav('/products')}; return <Layout><section className="auth card"><p className="eyebrow">Your account</p><h1>{mode==='signIn'?'Welcome back':'Create your account'}</h1><p>Sign in is required before checkout so you can track your order and delivery.</p>{msg&&<Notice kind={msg.includes('Check')?'success':'error'}>{msg}</Notice>}<form onSubmit={submit}>{mode==='signUp'&&<label>Full name<input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label>}<label>Email<input type="email" required value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></label><label>Password<input type="password" minLength="8" required value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/></label><button disabled={busy}>{busy?'Please wait…':mode==='signIn'?'Sign in':'Create account'}</button></form><button className="link-button" onClick={()=>{setMode(mode==='signIn'?'signUp':'signIn');setMsg('')}}>{mode==='signIn'?'New here? Create an account':'Already have an account? Sign in'}</button></section></Layout>}
