@@ -91,6 +91,7 @@ returns uuid language plpgsql security definer set search_path = public as $$
 declare order_id uuid; item jsonb; p public.products%rowtype; qty integer; subtotal_value numeric := 0; fee numeric := 2000;
 begin
   if auth.uid() is null then raise exception 'Sign in is required'; end if;
+  insert into public.profiles (id) values (auth.uid()) on conflict (id) do nothing;
   if jsonb_array_length(items) = 0 then raise exception 'Cart is empty'; end if;
   for item in select * from jsonb_array_elements(items) loop
     qty := (item->>'quantity')::integer;
