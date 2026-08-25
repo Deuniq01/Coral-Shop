@@ -1,7 +1,8 @@
-// Lightweight shopping assistant for Coral Shopping.
-// When VITE_AI_API_URL and VITE_AI_API_KEY are set it talks to an
-// OpenAI-compatible chat endpoint. Otherwise it replies from the local
-// catalog, so the chat still works in previews and offline.
+// Shopping assistant for Coral Shopping.
+// It answers live: when Supabase is configured it calls the secure
+// `ai-chat` Edge Function (which is catalogue aware), otherwise it can
+// call an OpenAI-compatible endpoint directly via VITE_ env vars, and
+// only falls back to the local brain when neither is available.
 
 import { sampleProducts } from './media.js';
 
@@ -11,6 +12,24 @@ const LLM_MODEL = import.meta.env.VITE_AI_MODEL || 'gpt-4o-mini';
 
 function money(n) {
   return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(Number(n || 0));
+}
+
+function catalogLines(catalog) {
+  return (catalog || [])
+    .map((p) => `${p.name} - ${money(p.price)} (${((p.category && p.category.name) || 'Essentials')})`)
+    .join('\n');
+}
+
+function systemPrompt(catalog) {
+  return [
+    'You are the shopping assistant for Coral Shopping, an Abeokuta store for foodstuffs, gifts and household essentials.',
+    'Be warm, short and helpful, like a friendly neighbour.',
+    'Answer based on the customer question and the catalogue below. You can recommend products, explain delivery across Abeokuta, bank transfer payments, and the Shop Your Way custom request form.',
+    'When you suggest a product, name it exactly as in the catalogue. Do not use em dashes.',
+    '',
+    'Catalogue:',
+    catalogLines(catalog) || '(no products loaded)',
+  ].join('\n');
 }
 
 function tokenize(s) {
@@ -45,7 +64,6 @@ function localReply(text, catalog) {
     return { text: 'Hello o! Welcome to Coral Shopping. I am here to help you find what you need, explain delivery around Abeokuta, or add items to your cart. What are you looking for today?' };
   }
 
-  // Add to cart intent
   if (/(add|put|include|place).*(cart|basket)|(cart|basket).*(add|put)/.test(t)) {
     const matches = findProducts(t.replace(/add|to (my )?cart|basket|please|me/g, ''), items);
     if (matches.length) {
@@ -80,10 +98,9 @@ function localReply(text, catalog) {
     }
   }
 
-  // Generic product search
   const found = findProducts(t, items);
   if (found.length) {
-    return { text: 'Here is what I found in the catalogue:' , products: found };
+    return { text: 'Here is what I found in the catalogue:', products: found };
   }
 
   return {
@@ -93,22 +110,25 @@ function localReply(text, catalog) {
 
 export async function assistantReply(text, ctx = {}) {
   const catalog = ctx.catalog && ctx.catalog.length ? ctx.catalog : sampleProducts;
+  const history = ctx.history && ctx.history.length ? ctx.history : [{ role: 'user', content: text }];
+
+  // 1) Secure, catalogue-aware live model through Supabase Edge Function
+  if (ctx.supabase) {
+    try {
+      const { data, error } = await ctx.supabase.functions.invoke('ai-chat', { body: { messages: history } });
+      if (!error && data && data.content) return { text: data.content };
+    } catch (e) {
+      // fall through to other options
+    }
+  }
+
+  // 2) Direct OpenAI-compatible endpoint (set VITE_AI_API_URL + VITE_AI_API_KEY)
   if (LLM_URL && LLM_KEY) {
     try {
       const res = await fetch(LLM_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${LLM_KEY}` },
-        body: JSON.stringify({
-          model: LLM_MODEL,
-          messages: [
-            {
-              role: 'system',
-              content:
-                'You are the friendly shopping assistant for Coral Shopping, an Abeokuta store for foodstuffs, gifts and household essentials. Keep replies short, warm and conversational, like a helpful neighbour. Mention delivery across Abeokuta, bank transfer payments, and the Shop Your Way custom request form when relevant. Do not use em dashes.',
-            },
-            { role: 'user', content: text },
-          ],
-        }),
+        body: JSON.stringify({ model: LLM_MODEL, messages: [{ role: 'system', content: systemPrompt(catalog) }, ...history] }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -116,8 +136,10 @@ export async function assistantReply(text, ctx = {}) {
         if (content) return { text: content };
       }
     } catch (e) {
-      // fall through to the local reply
+      // fall through to local
     }
   }
+
+  // 3) Local brain so the chat still works offline / in preview
   return localReply(text, catalog);
 }

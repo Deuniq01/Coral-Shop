@@ -97,8 +97,10 @@ function ChatLauncher(){
   const openChat=()=>{ setShowPopup(false); setOpen(true); };
   const send=async raw=>{
     const text=(raw||'').trim(); if(!text||busy) return;
-    setInput(''); setMessages(m=>[...m,{role:'user',text}]); setBusy(true);
-    const reply=await assistantReply(text,{catalog:products});
+    setInput('');
+    const history=[...messages, {role:'user', text}].map(m=>({role: m.role==='user'?'user':'assistant', content: m.text}));
+    setMessages(m=>[...m,{role:'user',text}]); setBusy(true);
+    const reply=await assistantReply(text,{catalog:products, history, supabase});
     if(reply.add) add(reply.add);
     setMessages(m=>[...m,{role:'bot',text:reply.text,products:reply.products}]);
     setBusy(false);
@@ -240,6 +242,7 @@ function Dashboard(){
   const {session,profile,signOut}=useAuth();
   const [orders,setOrders]=useState([]);
   const [requests,setRequests]=useState([]);
+  const [recs,setRecs]=useState([]);
   const [loading,setLoading]=useState(true);
   const load=async()=>{
     if(!session) return;
@@ -249,6 +252,7 @@ function Dashboard(){
     ]);
     setOrders(o||[]); setRequests(r||[]); setLoading(false);
   };
+  useEffect(()=>{ if(!supabase){ setRecs(sampleProducts); return; } supabase.from('products').select('*, category:categories(name,slug)').eq('is_active',true).order('created_at',{ascending:false}).limit(8).then(({data})=>setRecs(data&&data.length?data:sampleProducts)); },[]);
   useEffect(()=>{ if(!supabase){setLoading(false);return;} load(); },[session]);
   const name=profile?.full_name||session?.user?.email?.split('@')[0]||'there';
   const active=orders.filter(o=>!['delivered','closed','cancelled'].includes(o.status)).length;
@@ -280,6 +284,10 @@ function Dashboard(){
           <a className="button small secondary" href="/#custom-shop" style={{marginTop:14}}>New request</a>
         </>}
       </div>
+    </div>
+    <div className="recs-section">
+      <div className="section-title"><div><p className="eyebrow">For you</p><h2>Recommended for you</h2></div></div>
+      <div className="recs">{recs.slice(0,4).map(p=><ProductCard key={p.id||p.name} product={p}/>)}</div>
     </div>
     <div className="dash-actions">
       <Link className="button" to="/products">Continue shopping</Link>
