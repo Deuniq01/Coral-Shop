@@ -57,6 +57,26 @@ nav a.active { color: var(--primary); }
   font-size: 12px;
 }
 
+/* Add-to-cart feedback animations */
+.cart-count { display: inline-block; animation: cartbump .5s cubic-bezier(.34, 1.56, .44, 1); }
+@keyframes cartbump {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.45); }
+  100% { transform: scale(1); }
+}
+.fly-dot {
+  position: fixed;
+  z-index: 60;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--primary);
+  pointer-events: none;
+  transition: transform .65s cubic-bezier(.45, -0.15, .65, .35), opacity .65s ease;
+}
+.product-bottom button.added { background: #17603d; border-color: #17603d; }
+
 .menu-toggle {
   display: none;
   flex-direction: column;
@@ -338,12 +358,32 @@ textarea { min-height: 90px; resize: vertical; }
 .checkout form { padding: 24px; display: grid; gap: 15px; }
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
-.summary { height: max-content; padding: 22px; }
+.summary { height: max-content; padding: 0; display: flex; flex-direction: column; overflow: hidden; position: sticky; top: 96px; align-self: start; }
+.summary-body { padding: 22px 22px 8px; flex: 1; }
 .summary h2 { font-size: 27px; }
+.summary-total { margin-top: auto; padding: 14px 22px; background: #f7f5fa; border-top: 1px solid var(--line); }
 
-.line { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; }
+.line { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; align-items: center; }
 .line input { width: 48px; padding: 2px 4px; margin-left: 5px; }
 .line.total { font-size: 18px; }
+
+/* Bank details block with click-to-copy account number */
+.bank-details { padding: 14px 16px; margin: 0 0 6px; display: grid; gap: 10px; }
+.bank-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 14.5px; }
+.bank-row > span { color: var(--muted); }
+.bank-row > b { text-align: right; }
+.copy-account {
+  display: inline-flex; align-items: center; gap: 9px;
+  background: var(--secondary); border: 1px solid var(--line); border-radius: 8px;
+  padding: 6px 10px; cursor: pointer; font: inherit;
+}
+.copy-account b { font-size: 15.5px; letter-spacing: .6px; }
+.copy-account em {
+  font-style: normal; font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+  color: var(--primary); background: #fff; padding: 3px 8px; border-radius: 99px;
+}
+.copy-account:hover { border-color: var(--primary); }
+.copy-account.copied em { background: #196b45; color: #fff; }
 
 .orders { display: grid; gap: 18px; }
 .order { padding: 22px; }
@@ -383,23 +423,25 @@ textarea { min-height: 90px; resize: vertical; }
 
 .admin-products {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 22px;
 }
 
-.product-form { padding: 22px; margin: 0; }
-.product-table { height: max-content; overflow: hidden; }
+.product-form { padding: 22px; margin: 0; min-width: 0; }
+.product-table { height: max-content; overflow: visible; min-width: 0; }
 
 .product-table > div {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 48px minmax(0, 1fr) auto auto;
   gap: 14px;
   align-items: center;
   padding: 15px;
   border-bottom: 1px solid var(--line);
 }
 
-.product-table button { padding: 7px 10px; }
+.product-table > div > span { min-width: 0; overflow-wrap: anywhere; }
+.product-table > div > b { min-width: 0; white-space: nowrap; }
+.product-table button { padding: 7px 10px; white-space: nowrap; }
 
 .aisles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 .aisle { display: block; overflow: hidden; }
@@ -410,11 +452,6 @@ textarea { min-height: 90px; resize: vertical; }
 .aisle h3 { margin: 0 0 4px; font-size: 18px; }
 .aisle p { color: var(--muted); font-size: 14px; margin: 0 0 8px; }
 .aisle-link { color: var(--primary); font-weight: 600; font-size: 14px; }
-
-.stock-wall { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
-.stock-item { margin: 0; border-radius: 12px; overflow: hidden; background: #f3f0f2; }
-.stock-item img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; }
-.stock-item figcaption { padding: 9px 10px; font-size: 13px; font-weight: 600; color: var(--ink); }
 
 footer { padding: 48px 5vw 24px; background: var(--ink); color: #c9d3d8; font-size: 14px; }
 .footer-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 30px; }
@@ -427,7 +464,7 @@ footer h4 { color: #fff; margin: 0 0 12px; font-size: 15px; }
 
 .line.cart-line { align-items: center; }
 .cart-thumb { width: 46px; height: 46px; border-radius: 8px; object-fit: cover; background: #eee; flex: none; }
-.cart-info { flex: 1; }
+.cart-info { flex: 1; min-width: 0; }
 
 .admin-thumb { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; background: #eee; flex: none; }
 
@@ -459,7 +496,7 @@ footer h4 { color: #fff; margin: 0 0 12px; font-size: 15px; }
   .hero-art { margin-top: 26px; }
   .products { grid-template-columns: repeat(2, 1fr); }
   .aisles { grid-template-columns: 1fr; }
-  .stock-wall { grid-template-columns: repeat(3, 1fr); }
+  .summary { position: static; }
   .hamper-photo { order: -1; max-height: 280px; min-height: 0; }
   .footer-grid { grid-template-columns: 1fr; gap: 24px; }
   .dash-grid { grid-template-columns: 1fr; }
@@ -480,7 +517,6 @@ footer h4 { color: #fff; margin: 0 0 12px; font-size: 15px; }
   .products { grid-template-columns: 1fr; }
   .section-title { display: block; }
   .section-title h2 { font-size: 30px; }
-  .stock-wall { grid-template-columns: repeat(2, 1fr); }
 }
 
 .chat-fab {
