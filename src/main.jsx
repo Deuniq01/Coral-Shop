@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Link, NavLink, Navigate, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom';
+import { BrowserRouter, Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 import './styles.css';
 import { brand, heroImage, aisles, productImage, sampleProducts, bank } from './media.js';
@@ -15,9 +15,29 @@ const money = n => new Intl.NumberFormat('en-NG',{style:'currency',currency:'NGN
 const dateTime = d => d ? new Date(d).toLocaleString('en-NG',{dateStyle:'medium',timeStyle:'short'}) : 'To be arranged';
 const slugify = s => s.toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
 
-function AuthProvider({children}) { const [session,setSession]=useState(null),[profile,setProfile]=useState(null),[loading,setLoading]=useState(true);
-  useEffect(()=>{ if(!supabase){setLoading(false);return;} supabase.auth.getSession().then(({data})=>setSession(data.session)); const {data:{subscription}}=supabase.auth.onAuthStateChange((_e,next)=>setSession(next)); return ()=>subscription.unsubscribe(); },[]);
-  useEffect(()=>{ if(!session){setProfile(null);setLoading(false);return;} supabase.from('profiles').select('*').eq('id',session.user.id).single().then(({data})=>{setProfile(data);setLoading(false);}); },[session]);
+function AuthProvider({children}) {
+  const [session,setSession]=useState(null),[profile,setProfile]=useState(null),[loading,setLoading]=useState(true);
+  const loadProfile=async sess=>{
+    if(!sess){ setProfile(null); return; }
+    const {data}=await supabase.from('profiles').select('*').eq('id',sess.user.id).single();
+    setProfile(data);
+  };
+  useEffect(()=>{
+    if(!supabase){ setLoading(false); return; }
+    let active=true;
+    (async()=>{
+      const {data}=await supabase.auth.getSession();
+      if(!active) return;
+      setSession(data.session);
+      await loadProfile(data.session);
+      if(active) setLoading(false);
+    })();
+    const {data:{subscription}}=supabase.auth.onAuthStateChange(async(_e,next)=>{
+      setSession(next);
+      await loadProfile(next);
+    });
+    return ()=>{ active=false; subscription.unsubscribe(); };
+  },[]);
   return <Auth.Provider value={{session,profile,loading,signOut:()=>supabase.auth.signOut()}}>{children}</Auth.Provider> }
 function CartProvider({children}) { const [items,setItems]=useState(()=>JSON.parse(localStorage.getItem('coral-cart')||'[]')); useEffect(()=>localStorage.setItem('coral-cart',JSON.stringify(items)),[items]);
  const add=p=>setItems(x=>{const found=x.find(i=>i.id===p.id); return found?x.map(i=>i.id===p.id?{...i,quantity:i.quantity+1}:i):[...x,{...p,quantity:1}]});
@@ -199,16 +219,46 @@ function BankDetails({amount}){
 function SignIn(){const nav=useNavigate();const [mode,setMode]=useState('signIn'),[form,setForm]=useState({name:'',email:'',password:''}),[msg,setMsg]=useState(''),[busy,setBusy]=useState(false);if(!configured)return <Setup/>; const submit=async e=>{e.preventDefault();setBusy(true);setMsg('');let result;if(mode==='signIn')result=await supabase.auth.signInWithPassword({email:form.email,password:form.password});else result=await supabase.auth.signUp({email:form.email,password:form.password,options:{data:{full_name:form.name},emailRedirectTo:window.location.origin}});setBusy(false);if(result.error)return setMsg(result.error.message);if(mode==='signUp')setMsg('Check your email to confirm your account, then sign in.');else nav('/products')}; return <Layout><section className="auth card"><p className="eyebrow">Your account</p><h1>{mode==='signIn'?'Welcome back':'Create your account'}</h1><p>Sign in is required before checkout so you can track your order and delivery.</p>{msg&&<Notice kind={msg.includes('Check')?'success':'error'}>{msg}</Notice>}<form onSubmit={submit}>{mode==='signUp'&&<label>Full name<input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label>}<label>Email<input type="email" required value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></label><label>Password<input type="password" minLength="8" required value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/></label><button disabled={busy}>{busy?'Please wait…':mode==='signIn'?'Sign in':'Create account'}</button></form><button className="link-button" onClick={()=>{setMode(mode==='signIn'?'signUp':'signIn');setMsg('')}}>{mode==='signIn'?'New here? Create an account':'Already have an account? Sign in'}</button></section></Layout>}
 function Setup(){return <Layout><section className="card setup"><h1>Connect Coral Shop to Supabase</h1><p>This secure rebuild requires your free Supabase project credentials.</p><ol><li>Create a free project at Supabase.</li><li>Run <code>supabase/schema.sql</code> in its SQL Editor.</li><li>Copy <code>.env.example</code> to <code>.env</code> and add its Project URL and anon key.</li><li>Restart the app, create an account, then promote your first admin using the README instructions.</li></ol></section></Layout>}
 function Products({featured=false}){const [products,setProducts]=useState([]),[category,setCategory]=useState('all'),[loading,setLoading]=useState(true);const [params]=useSearchParams();const q=(params.get('q')||'').toLowerCase().trim();useEffect(()=>{if(!supabase){setProducts(sampleProducts);setLoading(false);return;}supabase.from('products').select('*, category:categories(name,slug)').eq('is_active',true).order('created_at',{ascending:false}).then(({data,error})=>{if(error)console.error(error);setProducts(data||[]);setLoading(false)})},[]);let list=category==='all'?products:products.filter(p=>p.category?.slug===category);if(q)list=list.filter(p=>(p.name+' '+(p.description||'')+' '+(p.category?.name||'')).toLowerCase().includes(q));list=list.slice(0,featured?4:100); return <section className="section"><div className="section-title"><div><p className="eyebrow">{featured?'Best sellers':'Catalog'}</p><h2>{featured?'Popular essentials':'Shop everything'}</h2></div>{featured&&<Link to="/products">Browse all products →</Link>}</div>{!featured&&<div className="chips">{['all','foodstuffs','gifts','household'].map(x=><button className={category===x?'selected':''} onClick={()=>setCategory(x)} key={x}>{x}</button>)}</div>}{loading?<p>Loading products…</p>:<div className="products">{list.map(p=><ProductCard key={p.id} product={p}/>)}</div>}{!loading&&!list.length&&<Notice>{q?'No products match your search. Try another term.':'No products are available yet. Import the product CSV from the Supabase Table Editor.'}</Notice>}</section>}
-function ProductCard({product}){const {add}=useCart();const [added,setAdded]=useState(false);const onAdd=e=>{if(product.stock_quantity<1)return;add(product);flyToCart(e.currentTarget);setAdded(true);setTimeout(()=>setAdded(false),1300)};return <article className="product card"><div className="product-media"><img src={productImage(product)} alt={product.name||''} loading="lazy"/></div><div><small>{product.category?.name||'Essentials'}</small><h3>{product.name}</h3><p>{product.description}</p><div className="product-bottom"><strong>{money(product.price)}</strong><button onClick={onAdd} className={added?'added':''} disabled={product.stock_quantity<1}>{product.stock_quantity<1?'Out of stock':added?'Added ✓':'Add to cart'}</button></div></div></article>}
+function QuantityStepper({quantity,onDecrease,onIncrease,atLimit}){
+  return <div className="qty-stepper">
+    <button type="button" className="qty-btn" onClick={onDecrease} aria-label="Decrease quantity">−</button>
+    <span className="qty-value">{quantity}</span>
+    <button type="button" className="qty-btn" onClick={onIncrease} aria-label="Increase quantity" disabled={atLimit} title={atLimit?'No more in stock':undefined}>+</button>
+  </div>;
+}
+function ProductCard({product}){
+  const {items,add,update}=useCart();
+  const inCart=items.find(i=>i.id===product.id);
+  const qty=inCart?inCart.quantity:0;
+  const outOfStock=product.stock_quantity<1;
+  const atLimit=product.stock_quantity>0 && qty>=product.stock_quantity;
+  const onAdd=e=>{ if(outOfStock) return; add(product); flyToCart(e.currentTarget); };
+  const onIncrease=e=>{ if(atLimit) return; add(product); flyToCart(e.currentTarget); };
+  const onDecrease=()=>update(product.id,qty-1);
+  return <article className="product card">
+    <div className="product-media"><img src={productImage(product)} alt={product.name||''} loading="lazy"/></div>
+    <div>
+      <small>{product.category?.name||'Essentials'}</small>
+      <h3>{product.name}</h3>
+      <p>{product.description}</p>
+      <div className="product-bottom">
+        <strong>{money(product.price)}</strong>
+        {outOfStock
+          ? <button disabled>Out of stock</button>
+          : qty>0
+            ? <QuantityStepper quantity={qty} onDecrease={onDecrease} onIncrease={onIncrease} atLimit={atLimit}/>
+            : <button onClick={onAdd}>Add to cart</button>}
+      </div>
+    </div>
+  </article>;
+}
 function CustomShopForm(){
   const {session,profile}=useAuth();
   const [form,setForm]=useState({name:profile?.full_name||'',phone:profile?.phone||'',items:'',budget:''});
-  const [mine,setMine]=useState([]);
   const [msg,setMsg]=useState('');
   const [kind,setKind]=useState('info');
   const [busy,setBusy]=useState(false);
-  const loadMine=()=>{if(!supabase||!session){setMine([]);return;} supabase.from('custom_requests').select('*').eq('user_id',session.user.id).order('created_at',{ascending:false}).then(({data})=>setMine(data||[]));};
-  useEffect(()=>{setForm(f=>({...f,name:profile?.full_name||f.name,phone:profile?.phone||f.phone})); loadMine();},[session,profile]);
+  useEffect(()=>{setForm(f=>({...f,name:profile?.full_name||f.name,phone:profile?.phone||f.phone}));},[session,profile]);
   const submit=async e=>{
     e.preventDefault();
     if(!session) return;
@@ -223,9 +273,8 @@ function CustomShopForm(){
     setBusy(false);
     if(error){ setKind('error'); return setMsg(error.message); }
     setKind('success');
-    setMsg("Request submitted successfully! We'll contact you soon.");
+    setMsg("Request submitted successfully! We'll contact you soon. You can track its status from your Dashboard.");
     setForm({name:profile?.full_name||'',phone:profile?.phone||'',items:'',budget:''});
-    loadMine();
   };
   return (
     <section className="custom-shop" id="custom-shop">
@@ -249,7 +298,6 @@ function CustomShopForm(){
           </div>
           <img className="hamper-photo" src="https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=700&h=820&fit=crop" alt="Coral Shopping gift hamper" loading="lazy"/>
         </div>
-        {session&&mine.length>0&&<div className="orders" style={{marginTop:28,textAlign:'left',maxWidth:560,marginLeft:'auto',marginRight:'auto'}}>{mine.map(r=><article className="order card" key={r.id}><div className="order-head"><div><span className={'status '+r.status}>{r.status}</span><h3>Your request</h3><small>{dateTime(r.created_at)}</small></div>{r.budget&&<b>{r.budget}</b>}</div><p style={{display:'block'}}>{r.items}</p></article>)}</div>}
       </div>
     </section>
   );
@@ -269,7 +317,7 @@ function AisleCards(){
 }
 function Home(){return <Layout><section className="hero"><div className="hero-copy"><p className="eyebrow">Abeokuta grocery and gift store</p><h1>Quality foodstuffs, gifts and household essentials, delivered to your door.</h1><p>Coral Shopping brings the market to you. Stock your kitchen, send a gift hamper, or tell us what you need and we will source it for you.</p><div className="hero-actions"><Link className="button" to="/products">Shop now</Link><a className="button secondary" href="#custom-shop">Shop your way</a></div></div><div className="hero-art"><img src={heroImage} alt="Coral Shopping groceries and household items" loading="lazy"/></div></section><AisleCards/><Products featured/><CustomShopForm/><section className="callout"><div><p className="eyebrow">Need a hand?</p><h2>Chat with us on WhatsApp for quick orders and delivery questions.</h2></div><a className="button secondary" href="https://wa.me/2349061965441" target="_blank" rel="noreferrer">Chat on WhatsApp</a></section></Layout>}
 function RequireAuth({children}){const {session,loading}=useAuth();if(loading)return <Layout><p>Loading…</p></Layout>;return session?children:<Navigate to="/sign-in" replace/>}
-function Checkout(){const {items,update,clear}=useCart();const {profile}=useAuth();const nav=useNavigate();const [shipping,setShipping]=useState({name:profile?.full_name||'',phone:profile?.phone||'',address:'',city:'Abeokuta',state:'Ogun'}),[msg,setMsg]=useState(''),[busy,setBusy]=useState(false);const subtotal=items.reduce((s,i)=>s+i.price*i.quantity,0),fee=2000;const submit=async e=>{e.preventDefault();if(!items.length)return;setBusy(true);const {data,error}=await supabase.rpc('create_order',{items:items.map(i=>({productId:i.id,quantity:i.quantity})),shipping});setBusy(false);if(error)return setMsg(error.message);clear();nav(`/orders?created=${data}`)};return <RequireAuth><Layout><section className="checkout"><div><p className="eyebrow">Delivery details</p><h1>Where should we deliver?</h1>{msg&&<Notice kind="error">{msg}</Notice>}<form className="card" onSubmit={submit}><div className="two"><label>Full name<input required value={shipping.name} onChange={e=>setShipping({...shipping,name:e.target.value})}/></label><label>Phone<input required value={shipping.phone} onChange={e=>setShipping({...shipping,phone:e.target.value})}/></label></div><label>Delivery address<textarea required value={shipping.address} onChange={e=>setShipping({...shipping,address:e.target.value})}/></label><div className="two"><label>City<input required value={shipping.city} onChange={e=>setShipping({...shipping,city:e.target.value})}/></label><label>State<input required value={shipping.state} onChange={e=>setShipping({...shipping,state:e.target.value})}/></label></div><h3>Payment method</h3><Notice>Pay by bank transfer. Your order stays <b>awaiting payment</b> until you confirm “I’ve made payment.”</Notice><BankDetails/><button disabled={busy||!items.length}>{busy?'Creating order…':'Place order'}</button></form></div><CartSummary items={items} update={update} subtotal={subtotal} fee={fee}/></section></Layout></RequireAuth>}
+function Checkout(){const {items,update,clear}=useCart();const {profile}=useAuth();const nav=useNavigate();const [shipping,setShipping]=useState({name:profile?.full_name||'',phone:profile?.phone||'',address:'',city:'Abeokuta',state:'Ogun'}),[msg,setMsg]=useState(''),[busy,setBusy]=useState(false);const subtotal=items.reduce((s,i)=>s+i.price*i.quantity,0),fee=2000;const submit=async e=>{e.preventDefault();if(!items.length)return;setBusy(true);const {data,error}=await supabase.rpc('create_order',{items:items.map(i=>({productId:i.id,quantity:i.quantity})),shipping});setBusy(false);if(error)return setMsg(error.message);clear();nav(`/orders?created=${data}`)};return <RequireAuth><Layout><section className="checkout"><div><p className="eyebrow">Delivery details</p><h1>Where should we deliver?</h1>{msg&&<Notice kind="error">{msg}</Notice>}<form className="card" onSubmit={submit}><div className="two"><label>Full name<input required value={shipping.name} onChange={e=>setShipping({...shipping,name:e.target.value})}/></label><label>Phone<input required value={shipping.phone} onChange={e=>setShipping({...shipping,phone:e.target.value})}/></label></div><label>Delivery address<textarea required value={shipping.address} onChange={e=>setShipping({...shipping,address:e.target.value})}/></label><div className="two"><label>City<input required value={shipping.city} onChange={e=>setShipping({...shipping,city:e.target.value})}/></label><label>State<input required value={shipping.state} onChange={e=>setShipping({...shipping,state:e.target.value})}/></label></div><h3>Payment method</h3><Notice>Pay by bank transfer. Once you place your order, we will show you our account details so you can complete payment and confirm it from your Orders page.</Notice><button disabled={busy||!items.length}>{busy?'Creating order…':'Place order'}</button></form></div><CartSummary items={items} update={update} subtotal={subtotal} fee={fee}/></section></Layout></RequireAuth>}
 function CartSummary({items,update,subtotal,fee}){return <aside className="summary card"><div className="summary-body"><h2>Your order</h2>{items.map(i=><div className="line cart-line" key={i.id}><img className="cart-thumb" src={productImage(i)} alt={i.name||''} loading="lazy"/><span className="cart-info">{i.name}<small>{money(i.price)} × <input aria-label="quantity" type="number" min="1" value={i.quantity} onChange={e=>update(i.id,Number(e.target.value))}/></small></span><b>{money(i.price*i.quantity)}</b></div>)}<hr/><div className="line"><span>Subtotal</span><b>{money(subtotal)}</b></div><div className="line"><span>Delivery</span><b>{money(fee)}</b></div></div><div className="line total summary-total"><span>Total</span><b>{money(subtotal+fee)}</b></div></aside>}
 function Orders(){const {session}=useAuth();const [orders,setOrders]=useState([]),[loading,setLoading]=useState(true),[msg,setMsg]=useState('');const load=()=>{if(!session)return;supabase.from('orders').select('*, order_items(*)').eq('user_id',session.user.id).order('created_at',{ascending:false}).then(({data,error})=>{setOrders(data||[]);setMsg(error?.message||'');setLoading(false)})};useEffect(load,[session]);const submitted=async id=>{const {error}=await supabase.rpc('submit_payment',{order_id:id});if(error)setMsg(error.message);else {setMsg('Payment submitted. We will confirm it shortly.');load();}};return <RequireAuth><Layout><section className="section"><p className="eyebrow">Your orders</p><h1>My orders</h1>{msg&&<Notice kind={msg.includes('submitted')?'success':'error'}>{msg}</Notice>}{loading?<p>Loading orders…</p>:!orders.length?<Notice>You have no orders yet. <Link to="/products">Start shopping.</Link></Notice>:<div className="orders">{orders.map(o=><article className="order card" key={o.id}><div className="order-head"><div><span className={'status '+o.status}>{o.status.replace('_',' ')}</span><h3>Order #{o.id.slice(0,8)}</h3><small>{dateTime(o.created_at)}</small></div><b>{money(o.total)}</b></div>{o.order_items.map(i=><p key={i.id}>{i.product_name} × {i.quantity} <span>{money(i.line_total)}</span></p>)}<hr/><p><b>Delivery:</b> {o.shipping_address}, {o.shipping_city}, {o.shipping_state}</p>{o.status==='awaiting_payment'&&<><Notice>Make your bank transfer below, then confirm. We will verify the payment before dispatch.</Notice><BankDetails amount={o.total}/><button onClick={()=>submitted(o.id)}>I've made payment</button></>}{o.delivery_scheduled_at&&<Notice kind="success"><b>Delivery scheduled:</b> {dateTime(o.delivery_scheduled_at)}{o.delivery_note&&` · ${o.delivery_note}`}</Notice>}</article>)}</div>}</section></Layout></RequireAuth>}
 function Dashboard(){
@@ -280,18 +328,16 @@ function Dashboard(){
   const [loading,setLoading]=useState(true);
   const load=async()=>{
     if(!session) return;
-    try {
-      const [oq,rq]=await Promise.all([
-        supabase.from('orders').select('*, order_items(*)').eq('user_id',session.user.id).order('created_at',{ascending:false}).catch(e=>{console.error('Failed to load orders:', e);return {data:null};}),
-        supabase.from('custom_requests').select('*').eq('user_id',session.user.id).order('created_at',{ascending:false}).catch(e=>{console.error('Failed to load requests:', e);return {data:null};})
-      ]);
-      setOrders(oq.data||[]);
-      setRequests(rq.data||[]);
-    } catch(e) {
-      console.error('Dashboard load failed:', e);
-    } finally {
-      setLoading(false);
-    }
+    setLoading(true);
+    const [oq,rq]=await Promise.all([
+      supabase.from('orders').select('*, order_items(*)').eq('user_id',session.user.id).order('created_at',{ascending:false}),
+      supabase.from('custom_requests').select('*').eq('user_id',session.user.id).order('created_at',{ascending:false})
+    ]);
+    if(oq.error) console.error('Failed to load orders:', oq.error);
+    if(rq.error) console.error('Failed to load requests:', rq.error);
+    setOrders(oq.data||[]);
+    setRequests(rq.data||[]);
+    setLoading(false);
   };
   useEffect(()=>{ if(!supabase){ setRecs(sampleProducts); return; } supabase.from('products').select('*, category:categories(name,slug)').eq('is_active',true).order('created_at',{ascending:false}).limit(8).then(({data})=>setRecs(data&&data.length?data:sampleProducts)); },[]);
   useEffect(()=>{ if(!supabase){setLoading(false);return;} load(); },[session]);
@@ -362,5 +408,42 @@ function AdminCustomRequests({requests,reload,message}){
   return <div className="orders">{requests.map(r=><article className="order card" key={r.id}><div className="order-head"><div><span className={'status '+r.status}>{r.status}</span><h3>{r.name}</h3><small>{r.phone} · {dateTime(r.created_at)}</small></div>{r.budget&&<b>{r.budget}</b>}</div><p style={{display:'block'}}>{r.items}</p><div className="admin-action">{r.status!=='contacted'&&r.status!=='closed'&&<button onClick={()=>update(r.id,'contacted')}>Mark contacted</button>}{r.status!=='closed'&&<button className="secondary" onClick={()=>update(r.id,'closed')}>Mark closed</button>}</div></article>)}</div>;
 }
 function AdminOrders({orders,reload,message}){const [details,setDetails]=useState({});const confirm=async id=>{const d=details[id]||{};const {error}=await supabase.rpc('confirm_payment',{order_id:id,scheduled_at:d.date?new Date(d.date).toISOString():null,note:d.note||null});if(error)return alert(error.message);message('Payment confirmed and delivery information saved.');reload()};const fulfill=async(id,status)=>{const {error}=await supabase.rpc('update_order_fulfillment',{order_id:id,next_status:status,scheduled_at:null,note:null});if(error)return alert(error.message);message('Order status updated.');reload()};if(!orders.length)return <Notice>No orders yet. Orders placed by customers will appear here as soon as they come in.</Notice>;return <div className="orders">{orders.map(o=><article className="order card" key={o.id}><div className="order-head"><div><span className={'status '+o.status}>{o.status.replace('_',' ')}</span><h3>#{o.id.slice(0,8)} · {o.profiles?.full_name||'Customer'}</h3><small>{o.profiles?.email} · {o.shipping_phone}</small></div><b>{money(o.total)}</b></div><p>{o.shipping_address}, {o.shipping_city}, {o.shipping_state}</p>{o.order_items.map(i=><p key={i.id}>{i.product_name} × {i.quantity}</p>)}{o.status==='pending'&&<div className="admin-action"><label>Delivery date & time<input type="datetime-local" onChange={e=>setDetails({...details,[o.id]:{...(details[o.id]||{}),date:e.target.value}})}/></label><label>Delivery note<input placeholder="Optional note" onChange={e=>setDetails({...details,[o.id]:{...(details[o.id]||{}),note:e.target.value}})}/></label><button onClick={()=>confirm(o.id)}>Payment received - mark paid</button></div>}{['paid','processing','shipped'].includes(o.status)&&<div className="admin-action"><button onClick={()=>fulfill(o.id,o.status==='paid'?'processing':o.status==='processing'?'shipped':'delivered')}>Mark {o.status==='paid'?'processing':o.status==='processing'?'shipped':'delivered'}</button>{o.delivery_scheduled_at&&<small>Scheduled: {dateTime(o.delivery_scheduled_at)}</small>}</div>}</article>)}</div>}
-function AdminProducts({products,reload,message}){const initial={name:'',price:'',category:'foodstuffs',description:'',image_url:'',stock_quantity:'0'};const [form,setForm]=useState(initial);const [editing,setEditing]=useState(null);const save=async e=>{e.preventDefault();const {data:cat}=await supabase.from('categories').select('id').eq('slug',form.category).single();const record={name:form.name,slug:slugify(form.name),price:Number(form.price),description:form.description,image_url:form.image_url,stock_quantity:Number(form.stock_quantity),category_id:cat?.id};const result=editing?await supabase.from('products').update(record).eq('id',editing):await supabase.from('products').insert(record);if(result.error)return alert(result.error.message);setForm(initial);setEditing(null);message('Product saved.');reload()};return <div className="admin-products"><form className="card product-form" onSubmit={save}><h2>{editing?'Edit product':'Add product'}</h2><div className="two"><label>Name<input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label><label>Price<input required type="number" min="0" value={form.price} onChange={e=>setForm({...form,price:e.target.value})}/></label></div><div className="two"><label>Category<select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}>{['foodstuffs','gifts','household'].map(x=><option key={x}>{x}</option>)}</select></label><label>Stock quantity<input type="number" min="0" value={form.stock_quantity} onChange={e=>setForm({...form,stock_quantity:e.target.value})}/></label></div><label>Image URL<input value={form.image_url} onChange={e=>setForm({...form,image_url:e.target.value})}/></label><label>Description<textarea required value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/></label><button>{editing?'Save changes':'Add product'}</button>{editing&&<button type="button" className="secondary" onClick={()=>{setEditing(null);setForm(initial)}}>Cancel</button>}</form><div className="product-table card">{products.map(p=><div key={p.id}><img className="admin-thumb" src={productImage(p)} alt={p.name||''} loading="lazy"/><span>{p.name}<small>{p.category?.name} · {p.stock_quantity} in stock</small></span><b>{money(p.price)}</b><button className="secondary" onClick={()=>{setEditing(p.id);setForm({...p,category:p.category?.slug||'foodstuffs'})}}>Edit</button></div>)}</div></div>}
-function App(){return <AuthProvider><CartProvider><BrowserRouter><Routes><Route path="/" element={<Home/>}/><Route path="/products" element={<Layout><Products/></Layout>}/><Route path="/sign-in" element={<SignIn/>}/><Route path="/checkout" element={<Checkout/>}/><Route path="/orders" element={<Orders/>}/><Route path="/dashboard" element={<Dashboard/>}/><Route path="/admin" element={<Admin/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes></BrowserRouter></CartProvider></AuthProvider>};createRoot(document.getElementById('root')).render(<App/>);
+function AdminProducts({products,reload,message}){
+  const initial={name:'',price:'',category:'foodstuffs',description:'',image_url:'',stock_quantity:'0'};
+  const [form,setForm]=useState(initial);
+  const [editing,setEditing]=useState(null);
+  const [uploading,setUploading]=useState(false);
+  const [uploadError,setUploadError]=useState('');
+  const fileInputRef=useRef(null);
+  const uploadImage=async e=>{
+    const file=e.target.files?.[0];
+    if(!file) return;
+    setUploadError('');
+    if(!file.type.startsWith('image/')){ setUploadError('Please choose an image file.'); return; }
+    if(file.size>5*1024*1024){ setUploadError('Image must be under 5MB.'); return; }
+    setUploading(true);
+    const ext=file.name.split('.').pop();
+    const path=`${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+    const {error}=await supabase.storage.from('product-images').upload(path,file,{cacheControl:'3600',upsert:false});
+    setUploading(false);
+    if(error){ setUploadError(error.message); return; }
+    const {data}=supabase.storage.from('product-images').getPublicUrl(path);
+    setForm(f=>({...f,image_url:data.publicUrl}));
+    if(fileInputRef.current) fileInputRef.current.value='';
+  };
+  const save=async e=>{e.preventDefault();const {data:cat}=await supabase.from('categories').select('id').eq('slug',form.category).single();const record={name:form.name,slug:slugify(form.name),price:Number(form.price),description:form.description,image_url:form.image_url,stock_quantity:Number(form.stock_quantity),category_id:cat?.id};const result=editing?await supabase.from('products').update(record).eq('id',editing):await supabase.from('products').insert(record);if(result.error)return alert(result.error.message);setForm(initial);setEditing(null);setUploadError('');message('Product saved.');reload()};
+  return <div className="admin-products"><form className="card product-form" onSubmit={save}><h2>{editing?'Edit product':'Add product'}</h2><div className="two"><label>Name<input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label><label>Price<input required type="number" min="0" value={form.price} onChange={e=>setForm({...form,price:e.target.value})}/></label></div><div className="two"><label>Category<select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}>{['foodstuffs','gifts','household'].map(x=><option key={x}>{x}</option>)}</select></label><label>Stock quantity<input type="number" min="0" value={form.stock_quantity} onChange={e=>setForm({...form,stock_quantity:e.target.value})}/></label></div>
+    <label>Product photo
+      <div className="image-upload">
+        {form.image_url&&<img className="image-upload-preview" src={form.image_url} alt="Product preview"/>}
+        <div className="image-upload-controls">
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={uploadImage} disabled={uploading}/>
+          {uploading&&<small>Uploading…</small>}
+          {uploadError&&<small className="image-upload-error">{uploadError}</small>}
+        </div>
+      </div>
+    </label>
+    <label>Or paste an image URL<input value={form.image_url} onChange={e=>setForm({...form,image_url:e.target.value})} placeholder="https://…"/></label>
+    <label>Description<textarea required value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/></label><button disabled={uploading}>{editing?'Save changes':'Add product'}</button>{editing&&<button type="button" className="secondary" onClick={()=>{setEditing(null);setForm(initial);setUploadError('')}}>Cancel</button>}</form><div className="product-table card">{products.map(p=><div key={p.id}><img className="admin-thumb" src={productImage(p)} alt={p.name||''} loading="lazy"/><span>{p.name}<small>{p.category?.name} · {p.stock_quantity} in stock</small></span><b>{money(p.price)}</b><button className="secondary" onClick={()=>{setEditing(p.id);setForm({...p,category:p.category?.slug||'foodstuffs'});setUploadError('')}}>Edit</button></div>)}</div></div>}
+function ScrollToTop(){const {pathname}=useLocation();useEffect(()=>{window.scrollTo(0,0)},[pathname]);return null}
+function App(){return <AuthProvider><CartProvider><BrowserRouter><ScrollToTop/><Routes><Route path="/" element={<Home/>}/><Route path="/products" element={<Layout><Products/></Layout>}/><Route path="/sign-in" element={<SignIn/>}/><Route path="/checkout" element={<Checkout/>}/><Route path="/orders" element={<Orders/>}/><Route path="/dashboard" element={<Dashboard/>}/><Route path="/admin" element={<Admin/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes></BrowserRouter></CartProvider></AuthProvider>};createRoot(document.getElementById('root')).render(<App/>);

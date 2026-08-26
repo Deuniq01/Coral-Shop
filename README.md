@@ -223,6 +223,9 @@ Any other static host works the same way: upload `dist/` and rewrite all paths t
 - **Chat error mentions `ai-chat` or CORS:** the function is deployed but failing (missing secret, model name). Check **Edge Functions → ai-chat → Logs** in the Supabase dashboard.
 - **Products do not show after import:** check that `schema.sql` ran fully (no error at the end), that the category slugs `foodstuffs`, `gifts`, `household` exist, and that `is_active` is `true`.
 - **Blank admin orders tab:** the admin panel now reports per-query errors with a Try again button; read the red notice to see which query failed (usually RLS/role).
+- **Existing project set up before recent updates:** two features need one-time SQL migrations on a project that predates them. `schema.sql` covers brand-new projects automatically; for a project you already deployed, run these once each in the Supabase SQL Editor (both are safe to re-run):
+  - `supabase/add_profile_email.sql` — adds `profiles.email`, required for the admin Orders tab to show customer emails.
+  - `supabase/add_product_images_bucket.sql` — creates the `product-images` storage bucket used by the "upload a photo" control in Admin → Products.
 
 ## Style and conventions
 

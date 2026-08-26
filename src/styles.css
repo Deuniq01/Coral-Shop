@@ -75,7 +75,6 @@ nav a.active { color: var(--primary); }
   pointer-events: none;
   transition: transform .65s cubic-bezier(.45, -0.15, .65, .35), opacity .65s ease;
 }
-.product-bottom button.added { background: #17603d; border-color: #17603d; }
 
 .menu-toggle {
   display: none;
@@ -250,6 +249,11 @@ footer {
 
 .product-bottom button { padding: 8px 12px; }
 
+.qty-stepper { display: flex; align-items: center; gap: 10px; background: var(--secondary); border: 1px solid var(--line); border-radius: 8px; padding: 4px; }
+.qty-btn { width: 28px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; line-height: 1; border-radius: 6px; background: #fff; color: var(--primary); border: 1px solid var(--line); }
+.qty-btn:hover:not(:disabled) { background: var(--primary); color: #fff; border-color: var(--primary); }
+.qty-value { min-width: 18px; text-align: center; font-weight: 700; color: var(--primary); }
+
 .chips, .tabs { display: flex; gap: 9px; margin: 16px 0 28px; flex-wrap: wrap; }
 
 .chips button, .tabs button {
@@ -377,7 +381,7 @@ textarea { min-height: 90px; resize: vertical; }
 .copy-account {
   display: inline-flex; align-items: center; gap: 9px;
   background: var(--secondary); border: 1px solid var(--line); border-radius: 8px;
-  padding: 6px 10px; cursor: pointer; font: inherit;
+  padding: 6px 10px; cursor: pointer; font: inherit; color: var(--primary);
 }
 .copy-account b { font-size: 15.5px; letter-spacing: .6px; }
 .copy-account em {
@@ -408,9 +412,10 @@ textarea { min-height: 90px; resize: vertical; }
 .status.pending { background: #e4e8ff; color: #2a3590; }
 .status.paid, .status.processing { background: #e4f5e9; color: #17603d; }
 .status.shipped { background: #e8efff; color: #384d9e; }
+.status.delivered, .status.closed { background: #e7f5ed; color: #196b45; }
+.status.cancelled { background: #fff0ed; color: #9e3224; }
 .status.new { background: #fff3c4; color: #7a5b00; }
 .status.contacted { background: #e4e8ff; color: #2a3590; }
-.status.closed { background: #e4f5e9; color: #17603d; }
 
 .admin-action {
   display: flex;
@@ -426,10 +431,11 @@ textarea { min-height: 90px; resize: vertical; }
 .admin-products {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
   gap: 22px;
 }
 
-.product-form { padding: 22px; margin: 0; min-width: 0; }
+.product-form { padding: 22px; margin: 0; min-width: 0; align-content: start; position: sticky; top: 92px; }
 .product-table { height: max-content; overflow: visible; min-width: 0; }
 
 .product-table > div {
@@ -470,6 +476,13 @@ footer h4 { color: #fff; margin: 0 0 12px; font-size: 15px; }
 
 .admin-thumb { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; background: #eee; flex: none; }
 
+.image-upload { display: flex; align-items: center; gap: 14px; }
+.image-upload-preview { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; background: #f3f0f2; border: 1px solid var(--line); flex: none; }
+.image-upload-controls { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+.image-upload-controls input[type="file"] { border: 1px dashed var(--line); background: #faf8fb; padding: 10px; border-radius: 8px; font-size: 13px; }
+.image-upload-controls small { color: var(--muted); }
+.image-upload-error { color: #9e3224; }
+
 @media (max-width: 800px) {
   header { gap: 12px; padding: 0 16px; }
   .menu-toggle { display: flex; }
@@ -499,6 +512,7 @@ footer h4 { color: #fff; margin: 0 0 12px; font-size: 15px; }
   .products { grid-template-columns: repeat(2, 1fr); }
   .aisles { grid-template-columns: 1fr; }
   .summary { position: static; }
+  .product-form { position: static; }
   .hamper-photo { order: -1; max-height: 280px; min-height: 0; }
   .footer-grid { grid-template-columns: 1fr; gap: 24px; }
   .dash-grid { grid-template-columns: 1fr; }
