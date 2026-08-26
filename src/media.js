@@ -9,6 +9,14 @@ export const brand = {
   ogImage: 'https://app.trickle.so/storage/app/Cora%20logol.jpg',
 };
 
+// Bank details shown to customers for bank-transfer payment (checkout and
+// the Orders page). VITE_BANK_* env vars override these defaults.
+export const bank = {
+  name: import.meta.env.VITE_BANK_NAME || 'Palmpay',
+  account: import.meta.env.VITE_BANK_ACCOUNT || '9061965441',
+  accountName: import.meta.env.VITE_BANK_ACCOUNT_NAME || 'Bolatito Roqeebah Kehinde',
+};
+
 export const heroImage =
   'https://images.unsplash.com/photo-1516594798947-e65505dbb29d?w=1200&h=800&fit=crop';
 
@@ -36,23 +44,6 @@ export const aisles = [
     blurb: 'Washing, cleaning and everyday household care.',
     image: 'https://images.unsplash.com/photo-1563453392212-326f5e854473?w=600&h=600&fit=crop',
   },
-];
-
-// A wall of original catalog photos shown on the home page.
-export const stockWall = [
-  { name: 'Rice', image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=500&h=500&fit=crop' },
-  { name: 'Beans', image: 'https://images.unsplash.com/photo-1589542840482-c7c456d2e93c?w=500&h=500&fit=crop' },
-  { name: 'Garri', image: 'https://images.unsplash.com/photo-1625937286074-9ca519d5d9df?w=500&h=500&fit=crop' },
-  { name: 'Oils', image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=500&h=500&fit=crop' },
-  { name: 'Sugar', image: 'https://images.unsplash.com/photo-1584043204475-8cc101d6c77a?w=500&h=500&fit=crop' },
-  { name: 'Salt', image: 'https://images.unsplash.com/photo-1607755384475-8cc101d6c77a?w=500&h=500&fit=crop' },
-  { name: 'Pasta', image: 'https://images.unsplash.com/photo-1551462147-37cc0f2da6a3?w=500&h=500&fit=crop' },
-  { name: 'Hampers', image: 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=500&h=500&fit=crop' },
-  { name: 'Vase', image: 'https://images.unsplash.com/photo-1578500494198-246f612d3b3d?w=500&h=500&fit=crop' },
-  { name: 'Detergent', image: 'https://images.unsplash.com/photo-1563453392212-326f5e854473?w=500&h=500&fit=crop' },
-  { name: 'Tissue', image: 'https://images.unsplash.com/photo-1584556326561-c8746083993b?w=500&h=500&fit=crop' },
-  { name: 'Soap', image: 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=500&h=500&fit=crop' },
-  { name: 'Towels', image: 'https://images.unsplash.com/photo-1585421514738-01798e348b17?w=500&h=500&fit=crop' },
 ];
 
 // Keyword to fallback image for products that arrive without an image_url.
