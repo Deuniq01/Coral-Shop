@@ -7,6 +7,7 @@ create type public.order_status as enum ('awaiting_payment', 'pending', 'paid', 
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text,
+  email text,
   phone text,
   role public.app_role not null default 'customer',
   created_at timestamptz not null default now(),
@@ -80,7 +81,8 @@ create or replace function public.is_admin() returns boolean language sql stable
 $$;
 create or replace function public.handle_new_user() returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into public.profiles (id, full_name) values (new.id, coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)));
+  insert into public.profiles (id, full_name, email) values (new.id, coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)), new.email)
+  on conflict (id) do update set email = excluded.email;
   return new;
 end; $$;
 create trigger on_auth_user_created after insert on auth.users for each row execute procedure public.handle_new_user();
@@ -91,7 +93,8 @@ returns uuid language plpgsql security definer set search_path = public as $$
 declare order_id uuid; item jsonb; p public.products%rowtype; qty integer; subtotal_value numeric := 0; fee numeric := 2000;
 begin
   if auth.uid() is null then raise exception 'Sign in is required'; end if;
-  insert into public.profiles (id) values (auth.uid()) on conflict (id) do nothing;
+  insert into public.profiles (id, email) select auth.uid(), u.email from auth.users u where u.id = auth.uid()
+    on conflict (id) do update set email = coalesce(public.profiles.email, excluded.email);
   if jsonb_array_length(items) = 0 then raise exception 'Cart is empty'; end if;
   for item in select * from jsonb_array_elements(items) loop
     qty := (item->>'quantity')::integer;
