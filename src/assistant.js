@@ -39,7 +39,7 @@ function systemPrompt(catalog, cartLine) {
     '- Delivery covers all of Abeokuta and nearby areas, flat fee ' + money(2000) + ', usually 24 to 48 hours after payment is confirmed.',
     '- Payment is by bank transfer only for now. Account details appear on the order page once an order is placed, not before.',
     '- Cannot find an item in the catalogue? Point them to the Shop Your Way custom request form on the home page.',
-    '- Support: WhatsApp 0906 196 5441, email info@coralshopping.ng.',
+    '- Support: WhatsApp 0906 196 5441, email kehindebolatito@gmail.com.',
     '',
     cartLine || 'The customer has an empty cart right now.',
     '',
@@ -204,7 +204,7 @@ function localReply(text, catalog, cart) {
   }
 
   if (/contact|whatsapp|phone|call|email|reach|number/.test(t)) {
-    return { text: 'You can reach Coral Shopping on WhatsApp at 0906 196 5441, by email at info@coralshopping.ng, or right here any time. What do you need?' };
+    return { text: 'You can reach Coral Shopping on WhatsApp at 0906 196 5441, by email at kehindebolatito@gmail.com, or right here any time. What do you need?' };
   }
 
   if (/recommend|suggest|gift|hamper|present|idea|birthday|occasion|anniversary/.test(t)) {

@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
       '- Delivery covers all of Abeokuta and nearby areas, flat fee ' + money(2000) + ', usually 24 to 48 hours after payment is confirmed.',
       '- Payment is by bank transfer only for now. Account details appear on the order page once an order is placed, not before. Orders sit as "awaiting payment" until the customer confirms the transfer, then the team verifies before dispatch.',
       '- Cannot find an item in the catalogue? Point them to the Shop Your Way custom request form on the home page.',
-      '- Support: WhatsApp 0906 196 5441, email info@coralshopping.ng.',
+      '- Support: WhatsApp 0906 196 5441, email kehindebolatito@gmail.com.',
       '',
       cartLine,
       '',
