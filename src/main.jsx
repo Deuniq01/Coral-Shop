@@ -102,10 +102,10 @@ function Footer(){
   );
 }
 function ChatLauncher(){
-  const {add}=useCart();
+  const {items,add}=useCart();
   const [open,setOpen]=useState(false);
   const [showPopup,setShowPopup]=useState(()=>{ try { return localStorage.getItem('coral-chat-popup')!=='hidden'; } catch { return true; } });
-  const [messages,setMessages]=useState([{role:'bot',text:'Hi there! I am Coral\'s shopping assistant. Ask me what we sell, what something costs, how delivery works in Abeokuta, or how to pay, and I will sort you out.'}]);
+  const [messages,setMessages]=useState([{role:'bot',text:"Hi, I'm here for Coral Shopping. Ask me about prices, what's in stock, delivery, or payment, and I'll sort you out."}]);
   const [input,setInput]=useState('');
   const [busy,setBusy]=useState(false);
   const [products,setProducts]=useState(sampleProducts);
@@ -120,7 +120,7 @@ function ChatLauncher(){
     setInput('');
     const history=[...messages, {role:'user', text}].map(m=>({role: m.role==='user'?'user':'assistant', content: m.text}));
     setMessages(m=>[...m,{role:'user',text}]); setBusy(true);
-    const reply=await assistantReply(text,{catalog:products, history, supabase});
+    const reply=await assistantReply(text,{catalog:products, history, supabase, cart:items});
     if(reply.add) add(reply.add);
     setMessages(m=>[...m,{role:'bot',text:reply.text,products:reply.products}]);
     setBusy(false);

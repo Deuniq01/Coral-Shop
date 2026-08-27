@@ -132,9 +132,11 @@ The role is enforced server-side: `is_admin()` checks the `profiles.role` column
 
 The floating chat button talks to three layers, in this order:
 
-1. **Supabase Edge Function `ai-chat` (primary, recommended).** A real LLM grounded in the live catalog: it reads the current active products from Postgres and answers with exact names and prices. The API key stays server-side as a Supabase secret, never in the browser.
-2. **Direct LLM endpoint (optional).** If `VITE_AI_API_URL` and `VITE_AI_API_KEY` are set, the browser can call an OpenAI-compatible endpoint directly. Useful for quick testing; less secure than the Edge Function because the key ships to the client.
-3. **Local brain (offline fallback).** A rule-based assistant in `src/assistant.js` that still answers price, stock, delivery, payment and gift questions from the catalog, and keeps a friendly persona for anything else. This is what runs in preview environments without Supabase.
+1. **Supabase Edge Function `ai-chat` (primary, recommended).** A real LLM grounded in the live catalog and the customer's current cart: it reads the active products from Postgres, answers with exact names and prices, and returns clickable product cards for whatever it recommends so the customer can add them straight from the chat. The API key stays server-side as a Supabase secret, never in the browser.
+2. **Direct LLM endpoint (optional).** If `VITE_AI_API_URL` and `VITE_AI_API_KEY` are set, the browser can call an OpenAI-compatible endpoint directly, with the same persona and product-card behavior. Useful for quick testing; less secure than the Edge Function because the key ships to the client.
+3. **Local brain (offline fallback).** A rule-based assistant in `src/assistant.js` that still answers price, stock, cart, delivery, payment and gift questions from the catalog, and keeps a friendly persona for anything else. This is what runs in preview environments without Supabase.
+
+All three layers share the same voice: short, conversational, professional-and-friendly replies rather than a corporate support-bot tone, with light Nigerian English where it fits naturally.
 
 Deploying the Edge Function (requires the [Supabase CLI](https://supabase.com/docs/guides/cli)):
 
@@ -148,7 +150,7 @@ supabase secrets set LLM_API_URL=https://api.openai.com/v1/chat/completions
 supabase secrets set LLM_MODEL=gpt-4o-mini
 ```
 
-The client calls it with `supabase.functions.invoke('ai-chat', { body: { messages } })`; if the call fails for any reason, the app silently falls through to the next layer, so chat never breaks.
+The client calls it with `supabase.functions.invoke('ai-chat', { body: { messages, cart } })`; if the call fails for any reason, the app silently falls through to the next layer, so chat never breaks.
 
 ## Order and payment flow
 

@@ -20,16 +20,42 @@ function catalogLines(catalog) {
     .join('\n');
 }
 
-function systemPrompt(catalog) {
+function systemPrompt(catalog, cartLine) {
   return [
-    'You are the shopping assistant for Coral Shopping, an Abeokuta store for foodstuffs, gifts and household essentials.',
-    'Be warm, short and helpful, like a friendly neighbour.',
-    'Answer based on the customer question and the catalogue below. You can recommend products, explain delivery across Abeokuta, bank transfer payments, and the Shop Your Way custom request form.',
-    'When you suggest a product, name it exactly as in the catalogue. Do not use em dashes.',
+    "You are the person who runs the chat for Coral Shopping, a store in Abeokuta selling foodstuffs, gift hampers and household essentials. You are not a generic AI assistant bot; you are staff, and you talk like it.",
+    '',
+    'How you sound:',
+    '- Write like a real person texting on WhatsApp, not like a customer-support script. Short sentences. Contractions. No corporate filler like "I\'d be happy to help!" or "Great question!" or "Certainly!".',
+    '- Professional and friendly, not overly excitable. Skip exclamation points unless something genuinely warrants one.',
+    '- Vary how you open replies, and do not end every message with a question just for the sake of it.',
+    '- Keep replies tight: usually 1 to 3 short sentences. Answer what was asked, then stop.',
+    '- Light, natural Nigerian English is fine where it fits ("o", "no wahala", "abeg") but do not force it into every message.',
+    '- If you genuinely do not know something, say so plainly and point them at WhatsApp (0906 196 5441) or the Shop Your Way custom request form.',
+    '- Never invent a product, price, or policy that is not in the catalogue or the facts below. Quote prices exactly as listed.',
+    '- When you recommend or confirm a product, use its exact catalogue name.',
+    '- Do not use em dashes.',
+    '',
+    'Facts you can rely on:',
+    '- Delivery covers all of Abeokuta and nearby areas, flat fee ' + money(2000) + ', usually 24 to 48 hours after payment is confirmed.',
+    '- Payment is by bank transfer only for now. Account details appear on the order page once an order is placed, not before.',
+    '- Cannot find an item in the catalogue? Point them to the Shop Your Way custom request form on the home page.',
+    '- Support: WhatsApp 0906 196 5441, email info@coralshopping.ng.',
+    '',
+    cartLine || 'The customer has an empty cart right now.',
     '',
     'Catalogue:',
     catalogLines(catalog) || '(no products loaded)',
   ].join('\n');
+}
+
+function cartSummary(cart) {
+  if (!Array.isArray(cart) || !cart.length) return null;
+  return `The customer currently has this in their cart: ${cart.map((c) => `${c.quantity} x ${c.name}`).join(', ')}.`;
+}
+
+function mentionedProducts(text, catalog) {
+  const t = (text || '').toLowerCase();
+  return (catalog || []).filter((p) => p.name && t.includes(String(p.name).toLowerCase())).slice(0, 4);
 }
 
 function tokenize(s) {
@@ -67,17 +93,25 @@ function stripFiller(t) {
 // The offline brain. It tries to answer like a real shop assistant:
 // varied phrasing, real prices from the catalogue, and it always stays
 // in character even for questions it cannot answer.
-function localReply(text, catalog) {
+function localReply(text, catalog, cart) {
   const t = (text || '').toLowerCase();
   const items = catalog && catalog.length ? catalog : sampleProducts;
   const hour = new Date().getHours();
   const dayPart = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
 
+  if (/what.s in my cart|my cart|cart total|how many items? (do i have|are in)/.test(t)) {
+    if (!cart || !cart.length) return { text: 'Your cart is empty right now. Want me to suggest something?' };
+    const total = cart.reduce((s, c) => s + Number(c.price || 0) * Number(c.quantity || 1), 0);
+    const list = cart.map((c) => `${c.quantity} x ${c.name}`).join(', ');
+    return { text: `You have ${list} in your cart, about ${money(total)} so far. Ready to checkout, or still adding things?` };
+  }
+
   if (looksLikeGreeting(t)) {
     return { text: pick([
-      `Good ${dayPart}! Welcome to Coral Shopping. I can help you pick groceries, check prices, or put together a gift hamper. What are you shopping for today?`,
-      `Hey o, good ${dayPart}! You have landed on the right spot. Tell me what you need and I will sort you out.`,
-      `Hello there! I am here to help with foodstuffs, gifts and household items. What can I get you?`,
+      `Good ${dayPart}! I can help you pick groceries, check prices, or put together a gift hamper. What are you shopping for?`,
+      `Hey o, good ${dayPart}. Tell me what you need and I will sort you out.`,
+      `Hello there, welcome to Coral Shopping. What can I get you?`,
+      `Hi! What are we shopping for today?`,
     ]) };
   }
 
@@ -96,9 +130,13 @@ function localReply(text, catalog) {
     const matches = findProducts(t.replace(/add|to (my )?cart|basket|please|me|for me/g, ' '), items);
     if (matches.length) {
       const p = matches[0];
-      return { text: `Done! I have added ${p.name} (${money(p.price)}) to your cart. Anything else I should throw in for you?`, add: p };
+      return { text: pick([
+        `Done, ${p.name} is in your cart now (${money(p.price)}). Anything else?`,
+        `Added ${p.name} for you, ${money(p.price)}. What else do you need?`,
+        `Got it, ${p.name} added at ${money(p.price)}.`,
+      ]), add: p };
     }
-    return { text: 'Hmm, I could not find that one in our catalogue. Try a product name like rice, garri, vegetable oil, or gift hamper and I will add it for you.' };
+    return { text: 'I could not match that to anything in our catalogue. Try a product name like rice, garri, vegetable oil, or gift hamper and I will add it.' };
   }
 
   if (/(how much|price|cost|charge|rate|expensive|cheap|how many naira)/.test(t)) {
@@ -215,12 +253,13 @@ function localReply(text, catalog) {
 export async function assistantReply(text, ctx = {}) {
   const catalog = ctx.catalog && ctx.catalog.length ? ctx.catalog : sampleProducts;
   const history = ctx.history && ctx.history.length ? ctx.history : [{ role: 'user', content: text }];
+  const cartLine = cartSummary(ctx.cart);
 
   // 1) Secure, catalogue-aware live model through Supabase Edge Function
   if (ctx.supabase) {
     try {
-      const { data, error } = await ctx.supabase.functions.invoke('ai-chat', { body: { messages: history } });
-      if (!error && data && data.content) return { text: data.content };
+      const { data, error } = await ctx.supabase.functions.invoke('ai-chat', { body: { messages: history, cart: ctx.cart || [] } });
+      if (!error && data && data.content) return { text: data.content, products: data.products && data.products.length ? data.products : undefined };
     } catch (e) {
       // fall through to other options
     }
@@ -232,12 +271,15 @@ export async function assistantReply(text, ctx = {}) {
       const res = await fetch(LLM_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${LLM_KEY}` },
-        body: JSON.stringify({ model: LLM_MODEL, messages: [{ role: 'system', content: systemPrompt(catalog) }, ...history] }),
+        body: JSON.stringify({ model: LLM_MODEL, temperature: 0.8, messages: [{ role: 'system', content: systemPrompt(catalog, cartLine) }, ...history] }),
       });
       if (res.ok) {
         const data = await res.json();
         const content = data?.choices?.[0]?.message?.content?.trim();
-        if (content) return { text: content };
+        if (content) {
+          const products = mentionedProducts(content, catalog);
+          return { text: content, products: products.length ? products : undefined };
+        }
       }
     } catch (e) {
       // fall through to local
@@ -245,5 +287,5 @@ export async function assistantReply(text, ctx = {}) {
   }
 
   // 3) Local brain so the chat still works offline / in preview
-  return localReply(text, catalog);
+  return localReply(text, catalog, ctx.cart);
 }

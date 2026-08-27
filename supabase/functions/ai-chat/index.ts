@@ -10,7 +10,7 @@
 //   supabase secrets set LLM_API_URL=https://api.openai.com/v1/chat/completions  # optional
 //   supabase secrets set LLM_MODEL=gpt-4o-mini       # optional
 //
-// The client calls this with: supabase.functions.invoke('ai-chat', { body: { messages } })
+// The client calls this with: supabase.functions.invoke('ai-chat', { body: { messages, cart } })
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const { messages } = await req.json();
+    const { messages, cart } = await req.json();
 
     // Pull the live, active catalogue so the model recommends real items.
     const supabase = createClient(
@@ -37,21 +37,39 @@ Deno.serve(async (req) => {
     );
     const { data: products } = await supabase
       .from('products')
-      .select('name, price, category:categories(name)')
+      .select('id, name, price, stock_quantity, image_url, category:categories(name)')
       .eq('is_active', true)
       .limit(80);
 
     const catalogue = (products || [])
-      .map((p: any) => `${p.name} - ${money(p.price)} (${(p.category && p.category.name) || 'Essentials'})`)
+      .map((p: any) => `${p.name} - ${money(p.price)} (${(p.category && p.category.name) || 'Essentials'})${p.stock_quantity < 1 ? ' [OUT OF STOCK]' : ''}`)
       .join('\n');
 
+    const cartLine = Array.isArray(cart) && cart.length
+      ? `The customer currently has this in their cart: ${cart.map((c: any) => `${c.quantity} x ${c.name}`).join(', ')}.`
+      : 'The customer has an empty cart right now.';
+
     const system = [
-      'You are the shopping assistant for Coral Shopping, an Abeokuta store for foodstuffs, gifts and household essentials.',
-      'Be warm, short and helpful, like a friendly neighbour running the shop.',
-      'Sound like a real human shop assistant: vary your phrasing, keep it conversational and natural, and never repeat the same sentence twice. Use light Nigerian English when it feels right (for example "o" or "no wahala") but keep it clear.',
-      'Answer based on the customer question and the catalogue below. Quote exact catalogue prices, recommend products by their exact catalogue names, explain delivery across Abeokuta, bank transfer payments, and the Shop Your Way custom request form.',
-      'When the customer asks a price or whether you have an item, look it up in the catalogue and answer specifically. If you genuinely do not know, say so simply and offer to help with products, prices, delivery or payments.',
-      'Do not use em dashes.',
+      "You are the person who runs the chat for Coral Shopping, a store in Abeokuta selling foodstuffs, gift hampers and household essentials. You are not a generic AI assistant bot; you are staff, and you talk like it.",
+      '',
+      'How you sound:',
+      '- Write like a real person texting on WhatsApp, not like a customer-support script. Short sentences. Contractions. No corporate filler like "I\'d be happy to help!" or "Great question!" or "Certainly!".',
+      '- Professional and friendly, not overly excitable. Skip exclamation points unless something genuinely warrants one; do not put one on every line.',
+      '- Vary how you open replies. Do not start every message the same way, and do not end every message with a question just for the sake of it, only ask one when you actually need info to help.',
+      '- Keep replies tight: usually 1 to 3 short sentences. Do not dump the whole catalogue or every policy detail unless asked; answer what was asked, then stop.',
+      '- Light, natural Nigerian English is fine where it fits ("o", "no wahala", "abeg") but do not force it into every message, and never overdo it.',
+      '- If you genuinely do not know something, say so plainly in one line and point them at WhatsApp (0906 196 5441) or the Shop Your Way custom request form, rather than guessing.',
+      '- Never invent a product, price, or policy that is not in the catalogue or the facts below. Quote prices exactly as listed.',
+      '- When you recommend or confirm a product, use its exact catalogue name so it can be matched and shown to the customer.',
+      '- Do not use em dashes.',
+      '',
+      'Facts you can rely on:',
+      '- Delivery covers all of Abeokuta and nearby areas, flat fee ' + money(2000) + ', usually 24 to 48 hours after payment is confirmed.',
+      '- Payment is by bank transfer only for now. Account details appear on the order page once an order is placed, not before. Orders sit as "awaiting payment" until the customer confirms the transfer, then the team verifies before dispatch.',
+      '- Cannot find an item in the catalogue? Point them to the Shop Your Way custom request form on the home page.',
+      '- Support: WhatsApp 0906 196 5441, email info@coralshopping.ng.',
+      '',
+      cartLine,
       '',
       'Catalogue:',
       catalogue || '(no products loaded)',
@@ -73,13 +91,20 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${llmKey}` },
       body: JSON.stringify({
         model: llmModel,
+        temperature: 0.8,
         messages: [{ role: 'system', content: system }, ...(messages || [])],
       }),
     });
 
     const data = await res.json();
-    const content = data?.choices?.[0]?.message?.content?.trim() || 'Sorry, I could not get a reply right now.';
-    return new Response(JSON.stringify({ content }), {
+    const content = data?.choices?.[0]?.message?.content?.trim() || 'Sorry, I could not get a reply right now. Try again in a moment or reach us on WhatsApp at 0906 196 5441.';
+
+    // Surface clickable product cards for whichever catalogue items the
+    // assistant actually named in its reply, so the UI can offer an Add
+    // to cart button without the model needing to call a separate tool.
+    const mentioned = (products || []).filter((p: any) => p.name && content.toLowerCase().includes(String(p.name).toLowerCase()));
+
+    return new Response(JSON.stringify({ content, products: mentioned.slice(0, 4) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {
