@@ -64,6 +64,7 @@ function Header(){
       </form>
       <nav className={menuOpen?'open':''}>
         <NavLink to="/products" onClick={()=>setMenuOpen(false)}>Shop</NavLink>
+        {session&&<NavLink to="/orders" onClick={()=>setMenuOpen(false)}>Orders</NavLink>}
         {session&&<NavLink to="/dashboard" onClick={()=>setMenuOpen(false)}>Dashboard</NavLink>}
         {profile?.role==='admin'&&<NavLink to="/admin" onClick={()=>setMenuOpen(false)}>Admin</NavLink>}
       </nav>
