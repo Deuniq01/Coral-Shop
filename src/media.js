@@ -4,9 +4,7 @@
 // development and on preview environments.
 
 export const brand = {
-  logo: 'https://app.trickle.so/storage/public/images/anonymous/6e28483f-d0f7-43cc-b922-33b56d30e9b9.coral%20shopping_125319',
-  mark: 'https://app.trickle.so/storage/app/coral%20shopping_125319.png',
-  ogImage: 'https://app.trickle.so/storage/app/Cora%20logol.jpg',
+  logo: '/logo.png',
 };
 
 // Bank details shown to customers for bank-transfer payment (checkout and

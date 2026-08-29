@@ -1,8 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --primary: #3538A0;
-  --accent: #FFCB05;
+  --primary: #00018F;
+  --accent: #FFCC29;
+  --coral: #FF7F50;
   --ink: #2C3E50;
   --muted: #7F8C8D;
   --line: #F0E8EC;
@@ -43,7 +44,7 @@ header {
   background: #f5f6fb;
   border-color: transparent;
 }
-.search input:focus { outline: 2px solid #3538a033; border-color: var(--primary); }
+.search input:focus { outline: 2px solid #00018f33; border-color: var(--primary); }
 
 nav { display: flex; gap: 22px; align-items: center; }
 nav a.active { color: var(--primary); }
@@ -126,6 +127,18 @@ nav a.active { color: var(--primary); }
   border-color: var(--accent);
 }
 
+.danger, button.danger {
+  background: #fff0ed;
+  color: #9e3224;
+  border-color: #fff0ed;
+}
+
+.danger:hover, button.danger:hover {
+  background: #9e3224;
+  color: #fff;
+  border-color: #9e3224;
+}
+
 button:disabled { opacity: .5; cursor: not-allowed; }
 
 main { min-height: calc(100vh - 145px); }
@@ -175,7 +188,7 @@ footer {
 .hero-art {
   overflow: hidden;
   border-radius: 18px;
-  box-shadow: 0 18px 40px #3538a033;
+  box-shadow: 0 18px 40px #00018f33;
 }
 
 .hero-art img {
@@ -218,7 +231,7 @@ footer {
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 12px;
-  box-shadow: 0 4px 18px #3538a012;
+  box-shadow: 0 4px 18px #00018f12;
 }
 
 .product { overflow: hidden; display: flex; flex-direction: column; }
@@ -258,6 +271,26 @@ footer {
 .qty-btn:hover:not(:disabled) { background: var(--primary); color: #fff; border-color: var(--primary); }
 .qty-value { min-width: 18px; text-align: center; font-weight: 700; color: var(--primary); }
 
+.product-media-link { display: block; }
+.product h3 a, .product-media-link { color: inherit; text-decoration: none; }
+.product h3 a:hover { color: var(--primary); }
+
+.back-link { display: inline-block; margin-bottom: 22px; color: var(--primary); font-weight: 600; }
+.product-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 44px; align-items: start; }
+.product-detail-media { aspect-ratio: 1 / 1; border-radius: 16px; overflow: hidden; background: #f3f0f2; }
+.product-detail-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.product-detail-info small { color: var(--muted); text-transform: uppercase; letter-spacing: .04em; font-size: 12.5px; }
+.product-detail-info h1 { margin: 8px 0 14px; font-size: 32px; }
+.product-detail-price { display: block; font-size: 26px; color: var(--primary); margin-bottom: 18px; }
+.product-detail-desc { color: var(--ink); line-height: 1.6; margin-bottom: 18px; }
+.product-detail-stock { color: var(--muted); font-size: 14px; margin-bottom: 22px; }
+.product-detail-stock.out { color: #9e3224; }
+.product-detail-action { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+
+@media (max-width: 700px) {
+  .product-detail-grid { grid-template-columns: 1fr; }
+}
+
 .chips, .tabs { display: flex; gap: 9px; margin: 16px 0 28px; flex-wrap: wrap; }
 
 .chips button, .tabs button {
@@ -277,6 +310,7 @@ footer {
 .custom-shop {
   background: var(--secondary);
   padding: 64px 24px;
+  margin: 48px 0;
 }
 
 .custom-shop .inner { max-width: 1080px; margin: auto; }
@@ -297,12 +331,12 @@ footer {
   max-height: 540px;
   object-fit: cover;
   border-radius: 16px;
-  box-shadow: 0 16px 36px #3538a026;
+  box-shadow: 0 16px 36px #00018f26;
 }
 
 .callout {
   max-width: 1132px;
-  margin: 0 auto 64px;
+  margin: 48px auto 64px;
   background: var(--primary);
   color: #fff;
   border-radius: 12px;
@@ -333,7 +367,7 @@ input, textarea, select {
 }
 
 input:focus, textarea:focus, select:focus {
-  outline: 2px solid #3538a033;
+  outline: 2px solid #00018f33;
   border-color: var(--primary);
 }
 
@@ -454,6 +488,7 @@ textarea { min-height: 90px; resize: vertical; }
 .product-table > div > span { min-width: 0; overflow-wrap: anywhere; }
 .product-table > div > b { min-width: 0; white-space: nowrap; }
 .product-table button { padding: 7px 10px; white-space: nowrap; }
+.row-actions { display: flex; gap: 8px; }
 
 .aisles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 .aisle { display: block; overflow: hidden; }
@@ -466,7 +501,7 @@ textarea { min-height: 90px; resize: vertical; }
 .aisle-link { color: var(--primary); font-weight: 600; font-size: 14px; }
 
 footer { padding: 48px 5vw 24px; background: var(--ink); color: #c9d3d8; font-size: 14px; }
-.footer-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 30px; }
+.footer-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1.3fr 1fr 1fr 1fr; gap: 30px; }
 .footer-logo { height: 34px; width: auto; margin-bottom: 14px; }
 .footer-tag { max-width: 320px; line-height: 1.6; }
 footer h4 { color: #fff; margin: 0 0 12px; font-size: 15px; }
@@ -503,7 +538,7 @@ footer h4 { color: #fff; margin: 0 0 12px; font-size: 15px; }
     gap: 0;
     padding: 6px 18px 16px;
     border-bottom: 1px solid var(--line);
-    box-shadow: 0 12px 24px #3538a018;
+    box-shadow: 0 12px 24px #00018f18;
     display: none;
     z-index: 29;
   }
@@ -529,7 +564,7 @@ footer h4 { color: #fff; margin: 0 0 12px; font-size: 15px; }
   .admin-action { display: grid; align-items: stretch; }
   .order-head { display: block; }
   .product-table > div { grid-template-columns: 44px 1fr auto; }
-  .product-table button { grid-column: 3; }
+  .product-table .row-actions { grid-column: 3; }
   .checkout { margin: 30px auto; }
 }
 
@@ -553,7 +588,7 @@ footer h4 { color: #fff; margin: 0 0 12px; font-size: 15px; }
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 10px 26px #3538a055;
+  box-shadow: 0 10px 26px #00018f55;
   z-index: 40;
 }
 .chat-fab:hover { background: #2b2f86; }
@@ -569,7 +604,7 @@ footer h4 { color: #fff; margin: 0 0 12px; font-size: 15px; }
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 16px;
-  box-shadow: 0 18px 50px #3538a033;
+  box-shadow: 0 18px 50px #00018f33;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -630,7 +665,7 @@ footer h4 { color: #fff; margin: 0 0 12px; font-size: 15px; }
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 14px;
-  box-shadow: 0 14px 36px #3538a033;
+  box-shadow: 0 14px 36px #00018f33;
   padding: 14px 14px 12px;
   z-index: 42;
 }

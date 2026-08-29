@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { BrowserRouter, Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 import './styles.css';
 import { brand, heroImage, aisles, productImage, sampleProducts, bank } from './media.js';
@@ -92,9 +92,16 @@ function Footer(){
         </div>
         <div>
           <h4>Contact</h4>
-          <p><a href="tel:09061965441">0906 196 5441</a></p>
+          <p><a href="tel:+2349061965441">0906 196 5441</a></p>
           <p><a href="mailto:kehindebolatito@gmail.com">kehindebolatito@gmail.com</a></p>
           <a className="button secondary" href="https://wa.me/2349061965441" target="_blank" rel="noreferrer">Chat on WhatsApp</a>
+        </div>
+        <div>
+          <h4>Coral Shopping</h4>
+          <a href="https://coral-shopping.netlify.app/">About us</a>
+          <a href="https://coral-shopping.netlify.app/#faq">FAQs</a>
+          <a href="https://coral-shopping.netlify.app/terms.html">Terms and Conditions</a>
+          <a href="https://coral-shopping.netlify.app/privacy.html">Privacy Policy</a>
         </div>
       </div>
       <div className="footer-base">© {new Date().getFullYear()} Coral Shopping. All rights reserved.</div>
@@ -237,10 +244,12 @@ function ProductCard({product}){
   const onIncrease=e=>{ if(atLimit) return; add(product); flyToCart(e.currentTarget); };
   const onDecrease=()=>update(product.id,qty-1);
   return <article className="product card">
-    <div className="product-media"><img src={productImage(product)} alt={product.name||''} loading="lazy"/></div>
+    <Link to={`/products/${product.slug||product.id}`} className="product-media-link">
+      <div className="product-media"><img src={productImage(product)} alt={product.name||''} loading="lazy"/></div>
+    </Link>
     <div>
       <small>{product.category?.name||'Essentials'}</small>
-      <h3>{product.name}</h3>
+      <h3><Link to={`/products/${product.slug||product.id}`}>{product.name}</Link></h3>
       <p>{product.description}</p>
       <div className="product-bottom">
         <strong>{money(product.price)}</strong>
@@ -252,6 +261,62 @@ function ProductCard({product}){
       </div>
     </div>
   </article>;
+}
+
+function ProductDetail(){
+  const {slug}=useParams();
+  const navigate=useNavigate();
+  const {items,add,update}=useCart();
+  const [product,setProduct]=useState(null);
+  const [loading,setLoading]=useState(true);
+  const [notFound,setNotFound]=useState(false);
+  useEffect(()=>{
+    setLoading(true); setNotFound(false);
+    if(!supabase){
+      const match=sampleProducts.find(p=>p.slug===slug||p.id===slug);
+      if(match){ setProduct(match); } else { setNotFound(true); }
+      setLoading(false);
+      return;
+    }
+    supabase.from('products').select('*, category:categories(name,slug)').eq('slug',slug).maybeSingle().then(({data,error})=>{
+      if(error||!data){ setNotFound(true); setLoading(false); return; }
+      setProduct(data); setLoading(false);
+    });
+  },[slug]);
+  const inCart=product&&items.find(i=>i.id===product.id);
+  const qty=inCart?inCart.quantity:0;
+  const outOfStock=product&&product.stock_quantity<1;
+  const atLimit=product&&product.stock_quantity>0&&qty>=product.stock_quantity;
+  const onAdd=e=>{ if(outOfStock) return; add(product); flyToCart(e.currentTarget); };
+  const onIncrease=e=>{ if(atLimit) return; add(product); flyToCart(e.currentTarget); };
+  const onDecrease=()=>update(product.id,qty-1);
+  if(loading) return <Layout><section className="section"><p>Loading…</p></section></Layout>;
+  if(notFound) return <Layout><section className="section"><Notice kind="error">We couldn't find that product.</Notice><Link to="/products">← Back to shop</Link></section></Layout>;
+  return <Layout>
+    <section className="section product-detail">
+      <Link to="/products" className="back-link">← Back to shop</Link>
+      <div className="product-detail-grid">
+        <div className="product-detail-media"><img src={productImage(product)} alt={product.name||''}/></div>
+        <div className="product-detail-info">
+          <small>{product.category?.name||'Essentials'}</small>
+          <h1>{product.name}</h1>
+          <strong className="product-detail-price">{money(product.price)}</strong>
+          <p className="product-detail-desc">{product.description}</p>
+          {outOfStock
+            ? <p className="product-detail-stock out">Out of stock</p>
+            : <p className="product-detail-stock">{product.stock_quantity} in stock</p>}
+          <div className="product-detail-action">
+            {outOfStock
+              ? <button disabled>Out of stock</button>
+              : qty>0
+                ? <QuantityStepper quantity={qty} onDecrease={onDecrease} onIncrease={onIncrease} atLimit={atLimit}/>
+                : <button onClick={onAdd}>Add to cart</button>}
+            {qty>0&&<Link to="/checkout" className="button secondary">Go to checkout</Link>}
+          </div>
+        </div>
+      </div>
+    </section>
+  </Layout>;
 }
 function CustomShopForm(){
   const {session,profile}=useAuth();
@@ -433,6 +498,7 @@ function AdminProducts({products,reload,message}){
     if(fileInputRef.current) fileInputRef.current.value='';
   };
   const save=async e=>{e.preventDefault();const {data:cat}=await supabase.from('categories').select('id').eq('slug',form.category).single();const record={name:form.name,slug:slugify(form.name),price:Number(form.price),description:form.description,image_url:form.image_url,stock_quantity:Number(form.stock_quantity),category_id:cat?.id};const result=editing?await supabase.from('products').update(record).eq('id',editing):await supabase.from('products').insert(record);if(result.error)return alert(result.error.message);setForm(initial);setEditing(null);setUploadError('');message('Product saved.');reload()};
+  const remove=async id=>{if(!window.confirm('Delete this product? This cannot be undone.'))return;const {error}=await supabase.from('products').delete().eq('id',id);if(error)return alert(error.message);if(editing===id){setEditing(null);setForm(initial);}message('Product deleted.');reload()};
   return <div className="admin-products"><form className="card product-form" onSubmit={save}><h2>{editing?'Edit product':'Add product'}</h2><div className="two"><label>Name<input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label><label>Price<input required type="number" min="0" value={form.price} onChange={e=>setForm({...form,price:e.target.value})}/></label></div><div className="two"><label>Category<select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}>{['foodstuffs','gifts','household'].map(x=><option key={x}>{x}</option>)}</select></label><label>Stock quantity<input type="number" min="0" value={form.stock_quantity} onChange={e=>setForm({...form,stock_quantity:e.target.value})}/></label></div>
     <label>Product photo
       <div className="image-upload">
@@ -445,6 +511,6 @@ function AdminProducts({products,reload,message}){
       </div>
     </label>
     <label>Or paste an image URL<input value={form.image_url} onChange={e=>setForm({...form,image_url:e.target.value})} placeholder="https://…"/></label>
-    <label>Description<textarea required value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/></label><button disabled={uploading}>{editing?'Save changes':'Add product'}</button>{editing&&<button type="button" className="secondary" onClick={()=>{setEditing(null);setForm(initial);setUploadError('')}}>Cancel</button>}</form><div className="product-table card">{products.map(p=><div key={p.id}><img className="admin-thumb" src={productImage(p)} alt={p.name||''} loading="lazy"/><span>{p.name}<small>{p.category?.name} · {p.stock_quantity} in stock</small></span><b>{money(p.price)}</b><button className="secondary" onClick={()=>{setEditing(p.id);setForm({...p,category:p.category?.slug||'foodstuffs'});setUploadError('')}}>Edit</button></div>)}</div></div>}
+    <label>Description<textarea required value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/></label><button disabled={uploading}>{editing?'Save changes':'Add product'}</button>{editing&&<button type="button" className="secondary" onClick={()=>{setEditing(null);setForm(initial);setUploadError('')}}>Cancel</button>}</form><div className="product-table card">{products.map(p=><div key={p.id}><img className="admin-thumb" src={productImage(p)} alt={p.name||''} loading="lazy"/><span>{p.name}<small>{p.category?.name} · {p.stock_quantity} in stock</small></span><b>{money(p.price)}</b><div className="row-actions"><button className="secondary" onClick={()=>{setEditing(p.id);setForm({...p,category:p.category?.slug||'foodstuffs'});setUploadError('')}}>Edit</button><button className="danger" onClick={()=>remove(p.id)}>Delete</button></div></div>)}</div></div>}
 function ScrollToTop(){const {pathname}=useLocation();useEffect(()=>{window.scrollTo(0,0)},[pathname]);return null}
-function App(){return <AuthProvider><CartProvider><BrowserRouter><ScrollToTop/><Routes><Route path="/" element={<Home/>}/><Route path="/products" element={<Layout><Products/></Layout>}/><Route path="/sign-in" element={<SignIn/>}/><Route path="/checkout" element={<Checkout/>}/><Route path="/orders" element={<Orders/>}/><Route path="/dashboard" element={<Dashboard/>}/><Route path="/admin" element={<Admin/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes></BrowserRouter></CartProvider></AuthProvider>};createRoot(document.getElementById('root')).render(<App/>);
+function App(){return <AuthProvider><CartProvider><BrowserRouter><ScrollToTop/><Routes><Route path="/" element={<Home/>}/><Route path="/products" element={<Layout><Products/></Layout>}/><Route path="/products/:slug" element={<ProductDetail/>}/><Route path="/sign-in" element={<SignIn/>}/><Route path="/checkout" element={<Checkout/>}/><Route path="/orders" element={<Orders/>}/><Route path="/dashboard" element={<Dashboard/>}/><Route path="/admin" element={<Admin/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes></BrowserRouter></CartProvider></AuthProvider>};createRoot(document.getElementById('root')).render(<App/>);
