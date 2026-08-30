@@ -1,0 +1,9 @@
+{
+  "name": "coral-shopping-landing",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Coral Shopping static landing page (plain HTML/CSS/JS, no build step, no framework)",
+  "dependencies": {},
+  "scripts": {},
+  "devDependencies": {}
+}
