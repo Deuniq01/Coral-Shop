@@ -38,7 +38,7 @@ This README is the onboarding guide: by the end of it you can run the app locall
 
 - **Frontend:** React 18 + Vite, React Router, plain CSS (indigo/yellow palette, Inter typography).
 - **Backend:** Supabase (Postgres + Row Level Security + Auth). All pricing, stock and role checks happen in Postgres security-definer functions, never in the browser.
-- **AI chat:** optional Supabase Edge Function (`supabase/functions/ai-chat`) that calls an OpenAI-compatible API with the live catalog; direct `VITE_AI_*` env vars as an alternative; a built-in local brain as the offline fallback.
+- **AI chat:** optional Supabase Edge Function (`supabase/functions/ai-chat`) that calls an OpenAI-compatible API with the live catalog and keeps the LLM key server-side; a built-in local brain as the offline fallback.
 - **Hosting:** any static host. `netlify.toml` is included for Netlify.
 
 ## Repository layout
@@ -49,7 +49,7 @@ netlify.toml                Netlify build config and SPA redirect
 .env.example                Template for local environment variables
 src/
   main.jsx                  All React UI: routes, pages, header/footer, cart, chat
-  assistant.js              AI chat logic: live function call, direct LLM, local brain
+  assistant.js              AI chat logic: secure Edge Function call, local brain
   media.js                  Brand assets, images, sample catalog, bank details
   styles.css                All styling (indigo #3538A0 / yellow #FFCB05, Inter)
 supabase/
@@ -93,9 +93,6 @@ All variables go in `.env` (local) or in your host's environment settings (produ
 | --- | --- | --- |
 | `VITE_SUPABASE_URL` | Yes (for real use) | Supabase Project URL. |
 | `VITE_SUPABASE_ANON_KEY` | Yes (for real use) | Supabase publishable anon key. Public by design; RLS protects the data. |
-| `VITE_AI_API_URL` | No | Direct OpenAI-compatible chat endpoint. Used only when the Edge Function is unavailable. |
-| `VITE_AI_API_KEY` | No | API key for the direct endpoint. |
-| `VITE_AI_MODEL` | No | Model name for the direct endpoint (default `gpt-4o-mini`). |
 | `VITE_BANK_NAME` | No | Overrides the default bank name (`Palmpay`). |
 | `VITE_BANK_ACCOUNT` | No | Overrides the default account number (`9061965441`). |
 | `VITE_BANK_ACCOUNT_NAME` | No | Overrides the default account name (`Bolatito Roqeebah Kehinde`). |
@@ -130,13 +127,12 @@ The role is enforced server-side: `is_admin()` checks the `profiles.role` column
 
 ## AI shopping assistant
 
-The floating chat button talks to three layers, in this order:
+The floating chat button talks to two layers, in this order:
 
 1. **Supabase Edge Function `ai-chat` (primary, recommended).** A real LLM grounded in the live catalog and the customer's current cart: it reads the active products from Postgres, answers with exact names and prices, and returns clickable product cards for whatever it recommends so the customer can add them straight from the chat. The API key stays server-side as a Supabase secret, never in the browser.
-2. **Direct LLM endpoint (optional).** If `VITE_AI_API_URL` and `VITE_AI_API_KEY` are set, the browser can call an OpenAI-compatible endpoint directly, with the same persona and product-card behavior. Useful for quick testing; less secure than the Edge Function because the key ships to the client.
-3. **Local brain (offline fallback).** A rule-based assistant in `src/assistant.js` that still answers price, stock, cart, delivery, payment and gift questions from the catalog, and keeps a friendly persona for anything else. This is what runs in preview environments without Supabase.
+2. **Local brain (offline fallback).** A rule-based assistant in `src/assistant.js` that still answers price, stock, cart, delivery, payment and gift questions from the catalog, and keeps a friendly persona for anything else. This is what runs in preview environments without Supabase, or whenever the Edge Function call fails.
 
-All three layers share the same voice: short, conversational, professional-and-friendly replies rather than a corporate support-bot tone, with light Nigerian English where it fits naturally.
+Both layers share the same voice: short, conversational, professional-and-friendly replies rather than a corporate support-bot tone, with light Nigerian English where it fits naturally. There is intentionally no browser-direct LLM option: a `VITE_`-prefixed API key would be baked into the public client bundle, so every real-model call goes through the Edge Function, which holds the key server-side.
 
 Deploying the Edge Function (requires the [Supabase CLI](https://supabase.com/docs/guides/cli)):
 
@@ -211,7 +207,7 @@ npm run build     # outputs dist/
 npm run preview   # serves the production build locally on 0.0.0.0:4173
 ```
 
-**Netlify** (configured in `netlify.toml`): connect the repo, and add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (plus any `VITE_AI_*` / `VITE_BANK_*` you use) under **Site settings → Environment variables**. The SPA redirect (`/* → /index.html`, 200) is already in `netlify.toml`, so deep links like `/orders` work on refresh. Then add your production domain to Supabase's redirect URLs.
+**Netlify** (configured in `netlify.toml`): connect the repo, and add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (plus any `VITE_BANK_*` you use) under **Site settings → Environment variables**. The SPA redirect (`/* → /index.html`, 200) is already in `netlify.toml`, so deep links like `/orders` work on refresh. Then add your production domain to Supabase's redirect URLs.
 
 Any other static host works the same way: upload `dist/` and rewrite all paths to `index.html`.
 
@@ -221,7 +217,7 @@ Any other static host works the same way: upload `dist/` and rewrite all paths t
 - **Sign-up works but checkout fails, or orders never appear:** the `profiles` row is missing. `create_order` now self-heals this, but if you ran an old schema, re-run `schema.sql` in a fresh project or promote the profile with the SQL in [Creating the first admin](#creating-the-first-admin).
 - **I signed up but there is no Admin link:** you are not an admin yet. Run the promote SQL above with your email, then refresh.
 - **Orders placed before a schema upgrade are gone:** before the `create_order` self-heal fix, orders from accounts with a missing `profiles` row failed to insert and never existed in the database. Hard-refresh `/dashboard` or `/admin` after deploying a new schema.
-- **Chat only gives canned answers:** the Edge Function is not deployed or `LLM_API_KEY` is not set, so the local brain is answering. Deploy `ai-chat` (see [AI shopping assistant](#ai-shopping-assistant)) or set the `VITE_AI_*` variables.
+- **Chat only gives canned answers:** the Edge Function is not deployed or `LLM_API_KEY` is not set, so the local brain is answering. Deploy `ai-chat` and set the secret (see [AI shopping assistant](#ai-shopping-assistant)).
 - **Chat error mentions `ai-chat` or CORS:** the function is deployed but failing (missing secret, model name). Check **Edge Functions → ai-chat → Logs** in the Supabase dashboard.
 - **Products do not show after import:** check that `schema.sql` ran fully (no error at the end), that the category slugs `foodstuffs`, `gifts`, `household` exist, and that `is_active` is `true`.
 - **Blank admin orders tab:** the admin panel now reports per-query errors with a Try again button; read the red notice to see which query failed (usually RLS/role).

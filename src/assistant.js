@@ -1,61 +1,17 @@
 // Shopping assistant for Coral Shopping.
 // It answers live: when Supabase is configured it calls the secure
-// `ai-chat` Edge Function (which is catalogue aware), otherwise it can
-// call an OpenAI-compatible endpoint directly via VITE_ env vars, and
-// only falls back to the local brain when neither is available.
+// `ai-chat` Edge Function (which is catalogue aware and keeps the LLM key
+// server side as a Supabase secret), and falls back to the local brain
+// when the function is unavailable (offline, preview, or not deployed).
+//
+// There is deliberately no browser-direct LLM path here: a `VITE_`-prefixed
+// API key would be baked into the shipped client bundle and exposed to every
+// visitor. All real-model calls go through the Edge Function instead.
 
 import { sampleProducts } from './media.js';
 
-const LLM_URL = import.meta.env.VITE_AI_API_URL;
-const LLM_KEY = import.meta.env.VITE_AI_API_KEY;
-const LLM_MODEL = import.meta.env.VITE_AI_MODEL || 'gpt-4o-mini';
-
 function money(n) {
   return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(Number(n || 0));
-}
-
-function catalogLines(catalog) {
-  return (catalog || [])
-    .map((p) => `${p.name} - ${money(p.price)} (${((p.category && p.category.name) || 'Essentials')})`)
-    .join('\n');
-}
-
-function systemPrompt(catalog, cartLine) {
-  return [
-    "You are the person who runs the chat for Coral Shopping, a store in Abeokuta selling foodstuffs, gift hampers and household essentials. You are not a generic AI assistant bot; you are staff, and you talk like it.",
-    '',
-    'How you sound:',
-    '- Write like a real person texting on WhatsApp, not like a customer-support script. Short sentences. Contractions. No corporate filler like "I\'d be happy to help!" or "Great question!" or "Certainly!".',
-    '- Professional and friendly, not overly excitable. Skip exclamation points unless something genuinely warrants one.',
-    '- Vary how you open replies, and do not end every message with a question just for the sake of it.',
-    '- Keep replies tight: usually 1 to 3 short sentences. Answer what was asked, then stop.',
-    '- Light, natural Nigerian English is fine where it fits ("o", "no wahala", "abeg") but do not force it into every message.',
-    '- If you genuinely do not know something, say so plainly and point them at WhatsApp (0906 196 5441) or the Shop Your Way custom request form.',
-    '- Never invent a product, price, or policy that is not in the catalogue or the facts below. Quote prices exactly as listed.',
-    '- When you recommend or confirm a product, use its exact catalogue name.',
-    '- Do not use em dashes.',
-    '',
-    'Facts you can rely on:',
-    '- Delivery covers all of Abeokuta and nearby areas, flat fee ' + money(2000) + ', usually 24 to 48 hours after payment is confirmed.',
-    '- Payment is by bank transfer only for now. Account details appear on the order page once an order is placed, not before.',
-    '- Cannot find an item in the catalogue? Point them to the Shop Your Way custom request form on the home page.',
-    '- Support: WhatsApp 0906 196 5441, email kehindebolatito@gmail.com.',
-    '',
-    cartLine || 'The customer has an empty cart right now.',
-    '',
-    'Catalogue:',
-    catalogLines(catalog) || '(no products loaded)',
-  ].join('\n');
-}
-
-function cartSummary(cart) {
-  if (!Array.isArray(cart) || !cart.length) return null;
-  return `The customer currently has this in their cart: ${cart.map((c) => `${c.quantity} x ${c.name}`).join(', ')}.`;
-}
-
-function mentionedProducts(text, catalog) {
-  const t = (text || '').toLowerCase();
-  return (catalog || []).filter((p) => p.name && t.includes(String(p.name).toLowerCase())).slice(0, 4);
 }
 
 function tokenize(s) {
@@ -253,39 +209,18 @@ function localReply(text, catalog, cart) {
 export async function assistantReply(text, ctx = {}) {
   const catalog = ctx.catalog && ctx.catalog.length ? ctx.catalog : sampleProducts;
   const history = ctx.history && ctx.history.length ? ctx.history : [{ role: 'user', content: text }];
-  const cartLine = cartSummary(ctx.cart);
 
-  // 1) Secure, catalogue-aware live model through Supabase Edge Function
+  // 1) Secure, catalogue-aware live model through Supabase Edge Function.
+  // The LLM key stays server side; the browser never sees it.
   if (ctx.supabase) {
     try {
       const { data, error } = await ctx.supabase.functions.invoke('ai-chat', { body: { messages: history, cart: ctx.cart || [] } });
       if (!error && data && data.content) return { text: data.content, products: data.products && data.products.length ? data.products : undefined };
     } catch (e) {
-      // fall through to other options
+      // fall through to the local brain
     }
   }
 
-  // 2) Direct OpenAI-compatible endpoint (set VITE_AI_API_URL + VITE_AI_API_KEY)
-  if (LLM_URL && LLM_KEY) {
-    try {
-      const res = await fetch(LLM_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${LLM_KEY}` },
-        body: JSON.stringify({ model: LLM_MODEL, temperature: 0.8, messages: [{ role: 'system', content: systemPrompt(catalog, cartLine) }, ...history] }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const content = data?.choices?.[0]?.message?.content?.trim();
-        if (content) {
-          const products = mentionedProducts(content, catalog);
-          return { text: content, products: products.length ? products : undefined };
-        }
-      }
-    } catch (e) {
-      // fall through to local
-    }
-  }
-
-  // 3) Local brain so the chat still works offline / in preview
+  // 2) Local brain so the chat still works offline / in preview
   return localReply(text, catalog, ctx.cart);
 }
