@@ -145,9 +145,17 @@ begin
 end; $$;
 create or replace function public.update_order_fulfillment(order_id uuid, next_status public.order_status, scheduled_at timestamptz default null, note text default null)
 returns void language plpgsql security definer set search_path = public as $$
+declare cur public.order_status;
 begin
   if not public.is_admin() then raise exception 'Admin access required'; end if;
   if next_status not in ('processing', 'shipped', 'delivered', 'cancelled') then raise exception 'Invalid fulfillment status'; end if;
+  select status into cur from public.orders where id = order_id;
+  if not found then raise exception 'Order not found'; end if;
+  if cur in ('delivered', 'cancelled') then raise exception 'Order is already % and cannot be changed', cur; end if;
+  -- Progressing an order forward requires a confirmed payment first; cancelling is allowed from any live state.
+  if next_status in ('processing', 'shipped', 'delivered') and cur not in ('paid', 'processing', 'shipped') then
+    raise exception 'Confirm the payment before moving this order to %', next_status;
+  end if;
   update public.orders set status = next_status, delivery_scheduled_at = coalesce(scheduled_at, delivery_scheduled_at), delivery_note = coalesce(note, delivery_note), updated_at = now() where id = order_id;
 end; $$;
 
