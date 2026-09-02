@@ -38,7 +38,7 @@ function AuthProvider({children}) {
     });
     return ()=>{ active=false; subscription.unsubscribe(); };
   },[]);
-  return <Auth.Provider value={{session,profile,loading,signOut:()=>supabase.auth.signOut()}}>{children}</Auth.Provider> }
+  return <Auth.Provider value={{session,profile,loading,refreshProfile:()=>loadProfile(session),signOut:()=>supabase.auth.signOut()}}>{children}</Auth.Provider> }
 function CartProvider({children}) { const [items,setItems]=useState(()=>JSON.parse(localStorage.getItem('coral-cart')||'[]')); useEffect(()=>localStorage.setItem('coral-cart',JSON.stringify(items)),[items]);
  const add=p=>setItems(x=>{const found=x.find(i=>i.id===p.id); return found?x.map(i=>i.id===p.id?{...i,quantity:i.quantity+1}:i):[...x,{...p,quantity:1}]});
  const update=(id,q)=>setItems(x=>q<1?x.filter(i=>i.id!==id):x.map(i=>i.id===id?{...i,quantity:q}:i)); return <Cart.Provider value={{items,add,update,clear:()=>setItems([])}}>{children}</Cart.Provider> }
@@ -386,6 +386,40 @@ function RequireAuth({children}){const {session,loading}=useAuth();if(loading)re
 function Checkout(){const {items,update,clear}=useCart();const {profile}=useAuth();const nav=useNavigate();const [shipping,setShipping]=useState({name:profile?.full_name||'',phone:profile?.phone||'',address:'',city:'Abeokuta',state:'Ogun'}),[msg,setMsg]=useState(''),[busy,setBusy]=useState(false);const subtotal=items.reduce((s,i)=>s+i.price*i.quantity,0),fee=2000;const submit=async e=>{e.preventDefault();if(!items.length)return;setBusy(true);const {data,error}=await supabase.rpc('create_order',{items:items.map(i=>({productId:i.id,quantity:i.quantity})),shipping});setBusy(false);if(error)return setMsg(error.message);clear();nav(`/orders?created=${data}`)};return <RequireAuth><Layout><section className="checkout"><div><p className="eyebrow">Delivery details</p><h1>Where should we deliver?</h1>{msg&&<Notice kind="error">{msg}</Notice>}<form className="card" onSubmit={submit}><div className="two"><label>Full name<input required value={shipping.name} onChange={e=>setShipping({...shipping,name:e.target.value})}/></label><label>Phone<input required value={shipping.phone} onChange={e=>setShipping({...shipping,phone:e.target.value})}/></label></div><label>Delivery address<textarea required value={shipping.address} onChange={e=>setShipping({...shipping,address:e.target.value})}/></label><div className="two"><label>City<input required value={shipping.city} onChange={e=>setShipping({...shipping,city:e.target.value})}/></label><label>State<input required value={shipping.state} onChange={e=>setShipping({...shipping,state:e.target.value})}/></label></div><h3>Payment method</h3><Notice>Pay by bank transfer. Once you place your order, we will show you our account details so you can complete payment and confirm it from your Orders page.</Notice><button disabled={busy||!items.length}>{busy?'Creating order…':'Place order'}</button></form></div><CartSummary items={items} update={update} subtotal={subtotal} fee={fee}/></section></Layout></RequireAuth>}
 function CartSummary({items,update,subtotal,fee}){return <aside className="summary card"><div className="summary-body"><h2>Your order</h2>{items.map(i=><div className="line cart-line" key={i.id}><img className="cart-thumb" src={productImage(i)} alt={i.name||''} loading="lazy"/><span className="cart-info">{i.name}<small>{money(i.price)} × <input aria-label="quantity" type="number" min="1" value={i.quantity} onChange={e=>update(i.id,Number(e.target.value))}/></small></span><b>{money(i.price*i.quantity)}</b></div>)}<hr/><div className="line"><span>Subtotal</span><b>{money(subtotal)}</b></div><div className="line"><span>Delivery</span><b>{money(fee)}</b></div></div><div className="line total summary-total"><span>Total</span><b>{money(subtotal+fee)}</b></div></aside>}
 function Orders(){const {session}=useAuth();const [orders,setOrders]=useState([]),[loading,setLoading]=useState(true),[msg,setMsg]=useState('');const load=()=>{if(!session)return;supabase.from('orders').select('*, order_items(*)').eq('user_id',session.user.id).order('created_at',{ascending:false}).then(({data,error})=>{setOrders(data||[]);setMsg(error?.message||'');setLoading(false)})};useEffect(load,[session]);const submitted=async id=>{const {error}=await supabase.rpc('submit_payment',{order_id:id});if(error)setMsg(error.message);else {setMsg('Payment submitted. We will confirm it shortly.');load();}};return <RequireAuth><Layout><section className="section"><p className="eyebrow">Your orders</p><h1>My orders</h1>{msg&&<Notice kind={msg.includes('submitted')?'success':'error'}>{msg}</Notice>}{loading?<p>Loading orders…</p>:!orders.length?<Notice>You have no orders yet. <Link to="/products">Start shopping.</Link></Notice>:<div className="orders">{orders.map(o=><article className="order card" key={o.id}><div className="order-head"><div><span className={'status '+o.status}>{o.status.replace('_',' ')}</span><h3>Order #{o.id.slice(0,8)}</h3><small>{dateTime(o.created_at)}</small></div><b>{money(o.total)}</b></div>{o.order_items.map(i=><p key={i.id}>{i.product_name} × {i.quantity} <span>{money(i.line_total)}</span></p>)}<hr/><p><b>Delivery:</b> {o.shipping_address}, {o.shipping_city}, {o.shipping_state}</p>{o.status==='awaiting_payment'&&<><Notice>Make your bank transfer below, then confirm. We will verify the payment before dispatch.</Notice><BankDetails amount={o.total}/><button onClick={()=>submitted(o.id)}>I've made payment</button></>}{o.delivery_scheduled_at&&<Notice kind="success"><b>Delivery scheduled:</b> {dateTime(o.delivery_scheduled_at)}{o.delivery_note&&` · ${o.delivery_note}`}</Notice>}</article>)}</div>}</section></Layout></RequireAuth>}
+function ProfileCard(){
+  const {session,profile,refreshProfile}=useAuth();
+  const [editing,setEditing]=useState(false),[saving,setSaving]=useState(false),[msg,setMsg]=useState('');
+  const [form,setForm]=useState({full_name:'',phone:''});
+  useEffect(()=>{ setForm({full_name:profile?.full_name||'',phone:profile?.phone||''}); },[profile,editing]);
+  const save=async e=>{
+    e.preventDefault();
+    if(!session) return;
+    setSaving(true); setMsg('');
+    const {data,error}=await supabase.from('profiles').update({full_name:form.full_name.trim(),phone:form.phone.trim()}).eq('id',session.user.id).select();
+    setSaving(false);
+    if(error){ setMsg(error.message); return; }
+    if(!data||!data.length){ setMsg('Could not save your changes. The profile update may not be enabled yet on the database.'); return; }
+    await refreshProfile();
+    setEditing(false);
+  };
+  return <div className="dash-col"><h2>Your details</h2><article className="order card">
+    {msg&&<Notice kind="error">{msg}</Notice>}
+    {!editing?<>
+      <p><b>Name:</b> {profile?.full_name||<span className="muted">Not set</span>}</p>
+      <p><b>Phone:</b> {profile?.phone||<span className="muted">Not set</span>}</p>
+      <p><b>Email:</b> {session?.user?.email}</p>
+      <button className="button small" style={{marginTop:14}} onClick={()=>{setMsg('');setEditing(true);}}>Edit details</button>
+    </>:<form onSubmit={save}>
+      <label>Full name<input type="text" maxLength="80" value={form.full_name} onChange={e=>setForm({...form,full_name:e.target.value})}/></label>
+      <label>Phone number<input type="tel" maxLength="20" value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})}/></label>
+      <p className="muted" style={{fontSize:'.85rem'}}>Your email is tied to your sign-in and cannot be changed here.</p>
+      <div className="dash-actions" style={{marginTop:8}}>
+        <button className="button small" type="submit" disabled={saving}>{saving?'Saving…':'Save'}</button>
+        <button className="button small secondary" type="button" onClick={()=>setEditing(false)}>Cancel</button>
+      </div>
+    </form>}
+  </article></div>;
+}
 function Dashboard(){
   const {session,profile,signOut}=useAuth();
   const [orders,setOrders]=useState([]);
@@ -437,6 +471,7 @@ function Dashboard(){
           <a className="button small secondary" href="/#custom-shop" style={{marginTop:14}}>New request</a>
         </>}
       </div>
+      <ProfileCard/>
     </div>
     <div className="recs-section">
       <div className="section-title"><div><p className="eyebrow">For you</p><h2>Recommended for you</h2></div></div>

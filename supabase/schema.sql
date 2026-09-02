@@ -87,6 +87,19 @@ begin
 end; $$;
 create trigger on_auth_user_created after insert on auth.users for each row execute procedure public.handle_new_user();
 
+-- Keep self-service profile edits honest: a user can change their name and
+-- phone, but identity and role are pinned to their previous values. Only an
+-- admin may change a role, so a customer cannot escalate their own privileges.
+create or replace function public.protect_profile_columns() returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  new.id := old.id;
+  new.role := case when public.is_admin() then new.role else old.role end;
+  new.created_at := old.created_at;
+  new.updated_at := now();
+  return new;
+end; $$;
+create trigger profiles_protect_columns before update on public.profiles for each row execute procedure public.protect_profile_columns();
+
 -- Prices, stock, and ownership are always decided on the server through this function.
 create or replace function public.create_order(items jsonb, shipping jsonb)
 returns uuid language plpgsql security definer set search_path = public as $$
@@ -167,6 +180,10 @@ alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
 alter table public.custom_requests enable row level security;
 create policy "profiles are private" on public.profiles for select using (id = auth.uid() or public.is_admin());
+-- A signed-in user may edit their own profile row (name, phone). The guard
+-- trigger below stops that same update from changing identity or role, so a
+-- customer cannot make themselves an admin through this policy.
+create policy "users update own profile" on public.profiles for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
 create policy "public catalog" on public.categories for select using (true);
 create policy "public active products" on public.products for select using (is_active or public.is_admin());
 create policy "admins manage categories" on public.categories for all using (public.is_admin()) with check (public.is_admin());
