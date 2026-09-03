@@ -1190,5 +1190,6 @@ aside:not(:has(:checked))
 .faq-answer p {
   margin: 0 0 18px;
   color: var(--dl-color-theme-neutral-dark);
-  line-height: 1.6;
+  font-size: 1.0625rem;
+  line-height: 1.7;
 }
