@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const payload = {};
     formData.forEach((value, key) => { payload[key] = value; });
 
-    fetch('/api/contact', {
+    fetch('https://api.web3forms.com/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(payload),
@@ -96,8 +96,8 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(async (res) => {
         let data = {};
         try { data = await res.json(); } catch (e) { data = {}; }
-        if (!res.ok || !data.ok) {
-          throw new Error(data.error || "Sorry, we couldn't send your message. Please try again or reach us on WhatsApp at 0906 196 5441.");
+        if (!res.ok || !data.success) {
+          throw new Error((data && data.message) || "Sorry, we couldn't send your message. Please try again or reach us on WhatsApp at 0906 196 5441.");
         }
         form.reset();
         const success = document.createElement('div');
