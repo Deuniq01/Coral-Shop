@@ -60,8 +60,6 @@ supabase/
     index.ts                Edge Function for the live AI assistant
 database/
   product.csv               Legacy product export (source of the seed)
-trickle/
-  assets/                   Legacy Trickle export, kept for reference only
 ```
 
 Note on `supabase/custom_requests.sql`: a brand-new project does not need it. `schema.sql` already contains the `custom_requests` table, validation trigger and RLS policies. Only run `custom_requests.sql` if you are working on a project that was set up before the schema was unified.
@@ -222,8 +220,8 @@ Any other static host works the same way: upload `dist/` and rewrite all paths t
 - **Products do not show after import:** check that `schema.sql` ran fully (no error at the end), that the category slugs `foodstuffs`, `gifts`, `household` exist, and that `is_active` is `true`.
 - **Blank admin orders tab:** the admin panel now reports per-query errors with a Try again button; read the red notice to see which query failed (usually RLS/role).
 - **Existing project set up before recent updates:** two features need one-time SQL migrations on a project that predates them. `schema.sql` covers brand-new projects automatically; for a project you already deployed, run these once each in the Supabase SQL Editor (both are safe to re-run):
-  - `supabase/add_profile_email.sql` — adds `profiles.email`, required for the admin Orders tab to show customer emails.
-  - `supabase/add_product_images_bucket.sql` — creates the `product-images` storage bucket used by the "upload a photo" control in Admin → Products.
+  - `supabase/add_profile_email.sql`: adds `profiles.email`, required for the admin Orders tab to show customer emails.
+  - `supabase/add_product_images_bucket.sql`: creates the `product-images` storage bucket used by the "upload a photo" control in Admin, Products.
 
 ## Style and conventions
 

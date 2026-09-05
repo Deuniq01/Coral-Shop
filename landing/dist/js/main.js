@@ -84,34 +84,34 @@ document.addEventListener('DOMContentLoaded', function () {
     const submitBtn = form.querySelector('.ezy__contact9-btn');
     if (submitBtn) submitBtn.disabled = true;
 
-    const encode = (data) => Object.keys(data)
-      .map((key) => encodeURIComponent(key) + '=' + encodeURIComponent(data[key]))
-      .join('&');
-
     const formData = new FormData(form);
     const payload = {};
     formData.forEach((value, key) => { payload[key] = value; });
 
-    fetch('/', {
+    fetch('/api/contact', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: encode(payload),
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(payload),
     })
-      .then((res) => {
-        if (!res.ok) throw new Error('Request failed with status ' + res.status);
+      .then(async (res) => {
+        let data = {};
+        try { data = await res.json(); } catch (e) { data = {}; }
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || "Sorry, we couldn't send your message. Please try again or reach us on WhatsApp at 0906 196 5441.");
+        }
         form.reset();
         const success = document.createElement('div');
         success.className = 'field-success alert alert-success mt-3';
         success.textContent = "Thank you, your message has been sent. We'll get back to you soon.";
         form.appendChild(success);
-        setTimeout(() => success.remove(), 6000);
+        setTimeout(() => success.remove(), 8000);
       })
-      .catch(() => {
+      .catch((err) => {
         const failure = document.createElement('div');
         failure.className = 'field-error alert alert-danger mt-3';
-        failure.textContent = "Sorry, we couldn't send your message. Please try again or reach us on WhatsApp.";
+        failure.textContent = err && err.message ? err.message : "Sorry, we couldn't send your message. Please try again or reach us on WhatsApp at 0906 196 5441.";
         form.appendChild(failure);
-        setTimeout(() => failure.remove(), 6000);
+        setTimeout(() => failure.remove(), 8000);
       })
       .finally(() => {
         if (submitBtn) submitBtn.disabled = false;
