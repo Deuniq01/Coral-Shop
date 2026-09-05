@@ -6,7 +6,18 @@
 //
 // Deploy:
 //   supabase functions deploy ai-chat
-//   supabase secrets set LLM_API_KEY=sk-...          # required
+//   supabase secrets set LLM_API_KEY=...             # required
+//
+// The endpoint is OpenAI-compatible, so any such provider works by also
+// setting LLM_API_URL and LLM_MODEL. Defaults target OpenAI.
+//
+// Groq (free tier, fast, recommended for this shop):
+//   supabase secrets set LLM_API_KEY=gsk_...
+//   supabase secrets set LLM_API_URL=https://api.groq.com/openai/v1/chat/completions
+//   supabase secrets set LLM_MODEL=llama-3.3-70b-versatile
+//
+// OpenAI (default if LLM_API_URL / LLM_MODEL are left unset):
+//   supabase secrets set LLM_API_KEY=sk-...
 //   supabase secrets set LLM_API_URL=https://api.openai.com/v1/chat/completions  # optional
 //   supabase secrets set LLM_MODEL=gpt-4o-mini       # optional
 //
@@ -92,6 +103,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: llmModel,
         temperature: 0.8,
+        max_tokens: 400,
         messages: [{ role: 'system', content: system }, ...(messages || [])],
       }),
     });
