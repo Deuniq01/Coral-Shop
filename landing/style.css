@@ -1193,3 +1193,23 @@ aside:not(:has(:checked))
   font-size: 1.0625rem;
   line-height: 1.7;
 }
+
+/* Live customer reviews (approved reviews pulled from the shop) */
+.live-reviews { margin-top: 48px; }
+.live-reviews__title { text-align: center; font-size: 1.5rem; margin: 0 0 26px; color: #00018F; }
+.live-reviews__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+.live-reviews__card {
+  margin: 0;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 16px;
+  box-shadow: 0 12px 34px rgba(0, 1, 143, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.live-reviews__stars { color: #FFCC29; font-size: 1.05rem; letter-spacing: 2px; }
+.live-reviews__stars .off { color: #e3e3e3; }
+.live-reviews__text { margin: 0; font-size: 1rem; line-height: 1.55; color: #2C3E50; }
+.live-reviews__name { font-weight: 700; color: #00018F; }

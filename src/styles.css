@@ -868,3 +868,24 @@ footer h4 { color: #fff; margin: 0 0 12px; font-size: 15px; }
   color: var(--ink);
 }
 .thread-form .button { flex: none; }
+
+/* Star rating + reviews */
+.stars { display: inline-flex; gap: 2px; line-height: 1; }
+.stars .star { color: #dcd7de; font-size: 20px; background: none; border: 0; padding: 0 1px; cursor: default; }
+.stars:not(.readonly) .star { cursor: pointer; }
+.stars .star.on { color: var(--accent); }
+.review-mine { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+.review-mine h4 { margin: 0 0 8px; font-size: 14px; }
+.review-mine-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.review-mine-row .stars .star { font-size: 15px; }
+.review-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font: 700 11px 'Inter';
+  text-transform: capitalize;
+}
+.review-badge.pending { background: var(--secondary); color: #8a6d00; }
+.review-badge.approved { background: #e4f6ec; color: #1a7f43; }
+.review-badge.rejected { background: #fdeaea; color: #b23b3b; }
+.admin-subhead { margin: 8px 0 4px; font-size: 15px; color: var(--muted); }

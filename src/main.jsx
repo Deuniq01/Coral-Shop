@@ -525,6 +525,37 @@ function OrderThread({orderId,admin}){
   </div>;
 }
 function Orders(){const {session}=useAuth();const [orders,setOrders]=useState([]),[loading,setLoading]=useState(true),[msg,setMsg]=useState(''),[busy,setBusy]=useState(null);const load=()=>{if(!session)return;supabase.from('orders').select('*, order_items(*)').eq('user_id',session.user.id).order('created_at',{ascending:false}).then(({data,error})=>{setOrders(data||[]);setMsg(error?.message||'');setLoading(false)})};useEffect(load,[session]);const submitted=async id=>{if(busy)return;setBusy(id);const {error}=await supabase.rpc('submit_payment',{order_id:id});setBusy(null);if(error)setMsg(error.message);else {setMsg('Payment submitted. We will confirm it shortly.');load();}};return <RequireAuth><Layout><section className="section"><p className="eyebrow">Your orders</p><h1>My orders</h1>{msg&&<Notice kind={msg.includes('submitted')?'success':'error'}>{msg}</Notice>}{loading?<p>Loading orders…</p>:!orders.length?<Notice>You have no orders yet. <Link to="/products">Start shopping.</Link></Notice>:<div className="orders">{orders.map(o=><article className="order card" key={o.id}><div className="order-head"><div><span className={'status '+o.status}>{o.status.replace('_',' ')}</span><h3>Order #{o.id.slice(0,8)}</h3><small>{dateTime(o.created_at)}</small></div><b>{money(o.total)}</b></div>{o.order_items.map(i=><p key={i.id}>{i.product_name} × {i.quantity} <span>{money(i.line_total)}</span></p>)}<hr/><p><b>Delivery:</b> {o.shipping_address}, {o.shipping_city}, {o.shipping_state}</p>{o.status==='awaiting_payment'&&<><Notice>Make your bank transfer below, then confirm. We will verify the payment before dispatch.</Notice><BankDetails amount={o.total}/><button disabled={busy===o.id} onClick={()=>submitted(o.id)}>{busy===o.id?'Submitting…':"I've made payment"}</button></>}{o.status==='pending'&&<><Notice kind="success">Thanks, we've noted that you have paid. We are verifying the transfer and will schedule delivery shortly. If you still need to complete the payment, the account details are below.</Notice><BankDetails amount={o.total}/></>}{o.delivery_scheduled_at&&<Notice kind="success"><b>Delivery scheduled:</b> {dateTime(o.delivery_scheduled_at)}{o.delivery_note&&` · ${o.delivery_note}`}</Notice>}<OrderThread orderId={o.id}/></article>)}</div>}</section></Layout></RequireAuth>}
+function Stars({value,onChange,readOnly}){
+  return <span className={'stars'+(readOnly?' readonly':'')} aria-label={(value||0)+' out of 5'}>
+    {[1,2,3,4,5].map(n=> onChange
+      ? <button type="button" key={n} className={'star'+(n<=value?' on':'')} aria-label={n+(n>1?' stars':' star')} aria-pressed={n===value} onClick={()=>onChange(n)}>★</button>
+      : <span key={n} className={'star'+(n<=value?' on':'')} aria-hidden="true">★</span>)}
+  </span>;
+}
+function ReviewCard(){
+  const {session}=useAuth();
+  const [rating,setRating]=useState(5),[body,setBody]=useState(''),[busy,setBusy]=useState(false),[msg,setMsg]=useState(''),[mine,setMine]=useState([]);
+  const load=async()=>{ if(!supabase||!session)return; const {data}=await supabase.from('reviews').select('*').eq('user_id',session.user.id).order('created_at',{ascending:false}); setMine(data||[]); };
+  useEffect(()=>{ load(); },[session]);
+  const submit=async e=>{
+    e.preventDefault(); const text=body.trim();
+    if(text.length<4){ setMsg('Please write a little more.'); return; }
+    setBusy(true); setMsg('');
+    const {error}=await supabase.from('reviews').insert({rating,body:text});
+    setBusy(false);
+    if(error){ setMsg(error.message); return; }
+    setBody(''); setRating(5); setMsg('Thank you! Your review will appear on our site once it is approved.'); load();
+  };
+  return <div className="dash-col"><h2>Leave a review</h2><article className="order card">
+    {msg&&<Notice kind={msg.startsWith('Thank')?'success':'error'}>{msg}</Notice>}
+    <form onSubmit={submit}>
+      <label>Your rating<Stars value={rating} onChange={setRating}/></label>
+      <label>Your review<textarea required maxLength="600" rows="3" value={body} onChange={e=>setBody(e.target.value)} placeholder="Tell others about your experience shopping with us"/></label>
+      <button className="button small" type="submit" disabled={busy}>{busy?'Sending…':'Submit review'}</button>
+    </form>
+    {mine.length>0&&<div className="review-mine"><h4>Your reviews</h4>{mine.map(r=><div key={r.id} className="review-mine-row"><Stars value={r.rating} readOnly/><span className={'review-badge '+r.status}>{r.status}</span></div>)}</div>}
+  </article></div>;
+}
 function ProfileCard(){
   const {session,profile,refreshProfile}=useAuth();
   const [editing,setEditing]=useState(false),[saving,setSaving]=useState(false),[msg,setMsg]=useState('');
@@ -611,6 +642,7 @@ function Dashboard(){
         </>}
       </div>
       <ProfileCard/>
+      <ReviewCard/>
     </div>
     <div className="recs-section">
       <div className="section-title"><div><p className="eyebrow">For you</p><h2>Recommended for you</h2></div></div>
@@ -623,20 +655,21 @@ function Dashboard(){
   </section></Layout></RequireAuth>;
 }
 function Admin(){const {profile}=useAuth();if(profile?.role!=='admin')return <Navigate to="/" replace/>;return <AdminPanel/>}
-function AdminPanel(){const [tab,setTab]=useState('orders'),[orders,setOrders]=useState([]),[products,setProducts]=useState([]),[requests,setRequests]=useState([]),[msg,setMsg]=useState(''),[errors,setErrors]=useState({}),[loading,setLoading]=useState(true);
+function AdminPanel(){const [tab,setTab]=useState('orders'),[orders,setOrders]=useState([]),[products,setProducts]=useState([]),[requests,setRequests]=useState([]),[reviews,setReviews]=useState([]),[msg,setMsg]=useState(''),[errors,setErrors]=useState({}),[loading,setLoading]=useState(true);
   const load=async()=>{
     setLoading(true);
-    const [oq,pq,rq]=await Promise.all([
+    const [oq,pq,rq,vq]=await Promise.all([
       supabase.from('orders').select('*, profiles(full_name,email), order_items(*)').order('created_at',{ascending:false}),
       supabase.from('products').select('*, category:categories(name,slug)').order('created_at',{ascending:false}),
-      supabase.from('custom_requests').select('*').order('created_at',{ascending:false})
+      supabase.from('custom_requests').select('*').order('created_at',{ascending:false}),
+      supabase.from('reviews').select('*, product:products(name)').order('created_at',{ascending:false})
     ]);
-    setOrders(oq.data||[]); setProducts(pq.data||[]); setRequests(rq.data||[]);
-    setErrors({orders:oq.error?.message||'', products:pq.error?.message||'', custom:rq.error?.message||''});
+    setOrders(oq.data||[]); setProducts(pq.data||[]); setRequests(rq.data||[]); setReviews(vq.data||[]);
+    setErrors({orders:oq.error?.message||'', products:pq.error?.message||'', custom:rq.error?.message||'', reviews:vq.error?.message||''});
     setLoading(false);
   };
   useEffect(()=>{load()},[]);
-  return <Layout><section className="section"><p className="eyebrow">Store control</p><h1>Store control centre</h1><div className="tabs"><button className={tab==='orders'?'selected':''} onClick={()=>setTab('orders')}>Orders</button><button className={tab==='custom'?'selected':''} onClick={()=>setTab('custom')}>Custom requests</button><button className={tab==='products'?'selected':''} onClick={()=>setTab('products')}>Products</button></div>{msg&&<Notice kind="success">{msg}</Notice>}{errors[tab]&&<Notice kind="error">{errors[tab]} <button className="link-button" onClick={load}>Try again</button></Notice>}{loading?<p>Loading…</p>:tab==='orders'?<AdminOrders orders={orders} reload={load} message={setMsg}/>:tab==='custom'?<AdminCustomRequests requests={requests} reload={load} message={setMsg}/>:<AdminProducts products={products} reload={load} message={setMsg}/>}</section></Layout>}
+  return <Layout><section className="section"><p className="eyebrow">Store control</p><h1>Store control centre</h1><div className="tabs"><button className={tab==='orders'?'selected':''} onClick={()=>setTab('orders')}>Orders</button><button className={tab==='custom'?'selected':''} onClick={()=>setTab('custom')}>Custom requests</button><button className={tab==='products'?'selected':''} onClick={()=>setTab('products')}>Products</button><button className={tab==='reviews'?'selected':''} onClick={()=>setTab('reviews')}>Reviews{reviews.filter(r=>r.status==='pending').length?' ('+reviews.filter(r=>r.status==='pending').length+')':''}</button></div>{msg&&<Notice kind="success">{msg}</Notice>}{errors[tab]&&<Notice kind="error">{errors[tab]} <button className="link-button" onClick={load}>Try again</button></Notice>}{loading?<p>Loading…</p>:tab==='orders'?<AdminOrders orders={orders} reload={load} message={setMsg}/>:tab==='custom'?<AdminCustomRequests requests={requests} reload={load} message={setMsg}/>:tab==='reviews'?<AdminReviews reviews={reviews} reload={load} message={setMsg}/>:<AdminProducts products={products} reload={load} message={setMsg}/>}</section></Layout>}
 function AdminCustomRequests({requests,reload,message}){
   const update=async(id,next_status)=>{
     const {error}=await supabase.from('custom_requests').update({status:next_status}).eq('id',id);
@@ -648,6 +681,25 @@ function AdminCustomRequests({requests,reload,message}){
   return <div className="orders">{requests.map(r=><article className="order card" key={r.id}><div className="order-head"><div><span className={'status '+r.status}>{r.status}</span><h3>{r.name}</h3><small>{r.phone} · {dateTime(r.created_at)}</small></div>{r.budget&&<b>{r.budget}</b>}</div><p style={{display:'block'}}>{r.items}</p><div className="admin-action">{r.status!=='contacted'&&r.status!=='closed'&&<button onClick={()=>update(r.id,'contacted')}>Mark contacted</button>}{r.status!=='closed'&&<button className="secondary" onClick={()=>update(r.id,'closed')}>Mark closed</button>}</div></article>)}</div>;
 }
 function AdminOrders({orders,reload,message}){const [details,setDetails]=useState({});const confirm=async id=>{const d=details[id]||{};const {error}=await supabase.rpc('confirm_payment',{order_id:id,scheduled_at:d.date?new Date(d.date).toISOString():null,note:d.note||null});if(error)return alert(error.message);message('Payment confirmed and delivery information saved.');reload()};const fulfill=async(id,status)=>{const {error}=await supabase.rpc('update_order_fulfillment',{order_id:id,next_status:status,scheduled_at:null,note:null});if(error)return alert(error.message);message('Order status updated.');reload()};if(!orders.length)return <Notice>No orders yet. Orders placed by customers will appear here as soon as they come in.</Notice>;return <div className="orders">{orders.map(o=><article className="order card" key={o.id}><div className="order-head"><div><span className={'status '+o.status}>{o.status.replace('_',' ')}</span><h3>#{o.id.slice(0,8)} · {o.profiles?.full_name||'Customer'}</h3><small>{o.profiles?.email} · {o.shipping_phone}</small></div><b>{money(o.total)}</b></div><p>{o.shipping_address}, {o.shipping_city}, {o.shipping_state}</p>{o.order_items.map(i=><p key={i.id}>{i.product_name} × {i.quantity}</p>)}{o.status==='pending'&&<div className="admin-action"><label>Delivery date & time<input type="datetime-local" onChange={e=>setDetails({...details,[o.id]:{...(details[o.id]||{}),date:e.target.value}})}/></label><label>Delivery note<input placeholder="Optional note" onChange={e=>setDetails({...details,[o.id]:{...(details[o.id]||{}),note:e.target.value}})}/></label><button onClick={()=>confirm(o.id)}>Payment received - mark paid</button></div>}{['paid','processing','shipped'].includes(o.status)&&<div className="admin-action"><button onClick={()=>fulfill(o.id,o.status==='paid'?'processing':o.status==='processing'?'shipped':'delivered')}>Mark {o.status==='paid'?'processing':o.status==='processing'?'shipped':'delivered'}</button>{o.delivery_scheduled_at&&<small>Scheduled: {dateTime(o.delivery_scheduled_at)}</small>}</div>}<OrderThread orderId={o.id} admin/></article>)}</div>}
+function AdminReviews({reviews,reload,message}){
+  const act=async(id,status)=>{const {error}=await supabase.rpc('set_review_status',{p_id:id,p_status:status});if(error)return alert(error.message);message('Review '+status+'.');reload()};
+  const remove=async id=>{if(!window.confirm('Delete this review permanently?'))return;const {error}=await supabase.from('reviews').delete().eq('id',id);if(error)return alert(error.message);message('Review deleted.');reload()};
+  if(!reviews.length) return <Notice>No reviews yet. Approved reviews appear on the landing page.</Notice>;
+  const pending=reviews.filter(r=>r.status==='pending'), rest=reviews.filter(r=>r.status!=='pending');
+  const row=r=><article className="order card" key={r.id}>
+    <div className="order-head"><div><span className={'review-badge '+r.status}>{r.status}</span><h3>{r.author_name}</h3><small><Stars value={r.rating} readOnly/> · {dateTime(r.created_at)}{r.product?.name?' · '+r.product.name:''}</small></div></div>
+    <p style={{display:'block'}}>{r.body}</p>
+    <div className="admin-action">
+      {r.status!=='approved'&&<button onClick={()=>act(r.id,'approved')}>Approve</button>}
+      {r.status!=='rejected'&&<button className="secondary" onClick={()=>act(r.id,'rejected')}>Reject</button>}
+      <button className="danger" onClick={()=>remove(r.id)}>Delete</button>
+    </div>
+  </article>;
+  return <div className="orders">
+    {pending.length>0&&<><h2 className="admin-subhead">Awaiting approval</h2>{pending.map(row)}</>}
+    {rest.length>0&&<><h2 className="admin-subhead">Reviewed</h2>{rest.map(row)}</>}
+  </div>;
+}
 function AdminProducts({products,reload,message}){
   const initial={name:'',price:'',category:'foodstuffs',description:'',image_url:'',stock_quantity:'0'};
   const [form,setForm]=useState(initial);
