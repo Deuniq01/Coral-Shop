@@ -14,7 +14,10 @@
 // Groq (free tier, fast, recommended for this shop):
 //   supabase secrets set LLM_API_KEY=gsk_...
 //   supabase secrets set LLM_API_URL=https://api.groq.com/openai/v1/chat/completions
-//   supabase secrets set LLM_MODEL=llama-3.3-70b-versatile
+//   supabase secrets set LLM_MODEL=openai/gpt-oss-20b
+// (gpt-oss-20b is the cost/speed sweet spot for short catalogue-grounded
+//  chat. Use the exact model IDs shown in the Groq console; they may carry a
+//  provider prefix like openai/ and change over time.)
 //
 // OpenAI (default if LLM_API_URL / LLM_MODEL are left unset):
 //   supabase secrets set LLM_API_KEY=sk-...
@@ -103,7 +106,9 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: llmModel,
         temperature: 0.8,
-        max_tokens: 400,
+        // Headroom so reasoning models (e.g. gpt-oss) have room to think and
+        // still return a full reply. The system prompt keeps answers short.
+        max_tokens: 1024,
         messages: [{ role: 'system', content: system }, ...(messages || [])],
       }),
     });
