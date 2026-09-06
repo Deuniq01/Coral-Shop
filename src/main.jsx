@@ -44,13 +44,39 @@ function CartProvider({children}) { const [items,setItems]=useState(()=>JSON.par
  const update=(id,q)=>setItems(x=>q<1?x.filter(i=>i.id!==id):x.map(i=>i.id===id?{...i,quantity:q}:i)); return <Cart.Provider value={{items,add,update,clear:()=>setItems([])}}>{children}</Cart.Provider> }
 function useAuth(){return useContext(Auth)} function useCart(){return useContext(Cart)}
 
+let headerProducts = null; // cached so the catalogue loads once, not on every navigation
 function Header(){
   const {session,profile,signOut}=useAuth();
   const {items}=useCart();
   const nav=useNavigate();
   const [menuOpen,setMenuOpen]=useState(false);
   const [q,setQ]=useState('');
-  const search=e=>{e.preventDefault();nav('/products?q='+encodeURIComponent(q.trim()))};
+  const [catalogue,setCatalogue]=useState(headerProducts||[]);
+  const [open,setOpen]=useState(false);
+  const [active,setActive]=useState(-1);
+  const boxRef=useRef(null);
+  useEffect(()=>{
+    if(headerProducts){ setCatalogue(headerProducts); return; }
+    if(!supabase){ headerProducts=sampleProducts; setCatalogue(sampleProducts); return; }
+    supabase.from('products').select('id,name,slug,price,image_url,stock_quantity,category:categories(name,slug)').eq('is_active',true).limit(300).then(({data})=>{ if(data&&data.length){ headerProducts=data; setCatalogue(data); } });
+  },[]);
+  useEffect(()=>{
+    const onDoc=e=>{ if(boxRef.current&&!boxRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown',onDoc);
+    return ()=>document.removeEventListener('mousedown',onDoc);
+  },[]);
+  const term=q.trim().toLowerCase();
+  const results=term?catalogue.filter(p=>((p.name||'')+' '+(p.category?.name||'')).toLowerCase().includes(term)).slice(0,6):[];
+  const close=()=>{ setOpen(false); setActive(-1); };
+  const goSearch=e=>{ if(e&&e.preventDefault) e.preventDefault(); const query=q.trim(); close(); setMenuOpen(false); if(query) nav('/products?q='+encodeURIComponent(query)); };
+  const goProduct=p=>{ setQ(''); close(); setMenuOpen(false); nav('/products/'+(p.slug||p.id)); };
+  const onKey=e=>{
+    if(!open||!results.length){ if(e.key==='ArrowDown'&&results.length){ e.preventDefault(); setOpen(true); setActive(0); } return; }
+    if(e.key==='ArrowDown'){ e.preventDefault(); setActive(a=>Math.min(a+1,results.length-1)); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); setActive(a=>Math.max(a-1,-1)); }
+    else if(e.key==='Enter'&&active>=0){ e.preventDefault(); goProduct(results[active]); }
+    else if(e.key==='Escape'){ close(); }
+  };
   return (
     <header>
       <button className="menu-toggle" aria-label="Toggle menu" aria-expanded={menuOpen} onClick={()=>setMenuOpen(o=>!o)}>
@@ -59,8 +85,25 @@ function Header(){
       <Link className="brand" to="/" onClick={()=>setMenuOpen(false)}>
         <img src={brand.logo} alt="Coral Shopping" />
       </Link>
-      <form className="search" onSubmit={search} role="search">
-        <input type="search" placeholder="Search rice, oil, gifts" value={q} onChange={e=>setQ(e.target.value)} aria-label="Search products" />
+      <form className="search" onSubmit={goSearch} role="search" ref={boxRef}>
+        <input type="search" placeholder="Search rice, oil, gifts" value={q}
+          onChange={e=>{ setQ(e.target.value); setOpen(true); setActive(-1); }}
+          onFocus={()=>{ if(q.trim()) setOpen(true); }}
+          onKeyDown={onKey}
+          role="combobox" aria-expanded={open&&results.length>0} aria-controls="search-suggest" aria-autocomplete="list" autoComplete="off" aria-label="Search products" />
+        {open&&results.length>0&&<ul className="search-suggest" id="search-suggest" role="listbox">
+          {results.map((p,i)=>(
+            <li key={p.id||p.slug} role="option" aria-selected={i===active} className={i===active?'active':''}>
+              <button type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>goProduct(p)}>
+                <img src={productImage(p)} alt="" loading="lazy"/>
+                <span className="ss-name">{p.name}</span>
+                <span className="ss-price">{money(p.price)}</span>
+              </button>
+            </li>
+          ))}
+          <li className="search-suggest-all"><button type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>goSearch()}>See all results for "{q.trim()}"</button></li>
+        </ul>}
+        {open&&term&&results.length===0&&catalogue.length>0&&<ul className="search-suggest" role="listbox"><li className="search-suggest-empty">No matches. Press Enter to search everything.</li></ul>}
       </form>
       <nav className={menuOpen?'open':''}>
         <NavLink to="/products" onClick={()=>setMenuOpen(false)}>Shop</NavLink>
@@ -547,5 +590,16 @@ function AdminProducts({products,reload,message}){
     </label>
     <label>Or paste an image URL<input value={form.image_url} onChange={e=>setForm({...form,image_url:e.target.value})} placeholder="https://…"/></label>
     <label>Description<textarea required value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/></label><button disabled={uploading}>{editing?'Save changes':'Add product'}</button>{editing&&<button type="button" className="secondary" onClick={()=>{setEditing(null);setForm(initial);setUploadError('')}}>Cancel</button>}</form><div className="product-table card">{products.map(p=><div key={p.id}><img className="admin-thumb" src={productImage(p)} alt={p.name||''} loading="lazy"/><span>{p.name}<small>{p.category?.name} · {p.stock_quantity} in stock</small></span><b>{money(p.price)}</b><div className="row-actions"><button className="secondary" onClick={()=>{setEditing(p.id);setForm({...p,category:p.category?.slug||'foodstuffs'});setUploadError('')}}>Edit</button><button className="danger" onClick={()=>remove(p.id)}>Delete</button></div></div>)}</div></div>}
+function NotFound(){
+  return <Layout><section className="section not-found">
+    <p className="eyebrow">Error 404</p>
+    <h1>We can't find that page</h1>
+    <p className="not-found-copy">The page you were looking for may have moved, or the link might be broken. Let's get you back to shopping.</p>
+    <div className="not-found-actions">
+      <Link className="button" to="/">Back to home</Link>
+      <Link className="button secondary" to="/products">Browse the shop</Link>
+    </div>
+  </section></Layout>;
+}
 function ScrollToTop(){const {pathname}=useLocation();useEffect(()=>{window.scrollTo(0,0)},[pathname]);return null}
-function App(){return <AuthProvider><CartProvider><BrowserRouter><ScrollToTop/><Routes><Route path="/" element={<Home/>}/><Route path="/products" element={<Layout><Products/></Layout>}/><Route path="/products/:slug" element={<ProductDetail/>}/><Route path="/sign-in" element={<SignIn/>}/><Route path="/checkout" element={<Checkout/>}/><Route path="/orders" element={<Orders/>}/><Route path="/dashboard" element={<Dashboard/>}/><Route path="/admin" element={<Admin/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes></BrowserRouter></CartProvider></AuthProvider>};createRoot(document.getElementById('root')).render(<App/>);
+function App(){return <AuthProvider><CartProvider><BrowserRouter><ScrollToTop/><Routes><Route path="/" element={<Home/>}/><Route path="/products" element={<Layout><Products/></Layout>}/><Route path="/products/:slug" element={<ProductDetail/>}/><Route path="/sign-in" element={<SignIn/>}/><Route path="/checkout" element={<Checkout/>}/><Route path="/orders" element={<Orders/>}/><Route path="/dashboard" element={<Dashboard/>}/><Route path="/admin" element={<Admin/>}/><Route path="*" element={<NotFound/>}/></Routes></BrowserRouter></CartProvider></AuthProvider>};createRoot(document.getElementById('root')).render(<App/>);
