@@ -45,6 +45,56 @@ function CartProvider({children}) { const [items,setItems]=useState(()=>JSON.par
 function useAuth(){return useContext(Auth)} function useCart(){return useContext(Cart)}
 
 let headerProducts = null; // cached so the catalogue loads once, not on every navigation
+
+function NotificationBell(){
+  const {session}=useAuth(); const nav=useNavigate();
+  const [items,setItems]=useState([]); const [open,setOpen]=useState(false);
+  const boxRef=useRef(null);
+  const unread=items.reduce((a,n)=>a+(n.read?0:1),0);
+  useEffect(()=>{
+    if(!supabase||!session){ setItems([]); return; }
+    let active=true; const uid=session.user.id;
+    (async()=>{
+      const {data}=await supabase.from('notifications').select('*').order('created_at',{ascending:false}).limit(20);
+      if(active&&data) setItems(data);
+    })();
+    const ch=supabase.channel('notif-'+uid)
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications',filter:'user_id=eq.'+uid},
+        payload=>setItems(x=>x.some(n=>n.id===payload.new.id)?x:[payload.new,...x].slice(0,20)))
+      .subscribe();
+    return ()=>{ active=false; supabase.removeChannel(ch); };
+  },[session]);
+  useEffect(()=>{
+    const onDoc=e=>{ if(boxRef.current&&!boxRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown',onDoc); return ()=>document.removeEventListener('mousedown',onDoc);
+  },[]);
+  const markAll=async()=>{ setItems(x=>x.map(n=>({...n,read:true}))); if(supabase) await supabase.rpc('mark_notifications_read',{p_ids:null}); };
+  const openOne=n=>{
+    setOpen(false);
+    if(!n.read){ setItems(x=>x.map(m=>m.id===n.id?{...m,read:true}:m)); if(supabase) supabase.rpc('mark_notifications_read',{p_ids:[n.id]}); }
+    if(n.link) nav(n.link);
+  };
+  if(!session) return null;
+  return <div className="notif" ref={boxRef}>
+    <button type="button" className="notif-bell" aria-label={'Notifications'+(unread?', '+unread+' unread':'')} aria-haspopup="true" aria-expanded={open} onClick={()=>setOpen(o=>!o)}>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      {unread>0&&<span className="notif-badge">{unread>9?'9+':unread}</span>}
+    </button>
+    {open&&<div className="notif-panel" role="menu">
+      <div className="notif-head"><strong>Notifications</strong>{unread>0&&<button type="button" className="link-button" onClick={markAll}>Mark all read</button>}</div>
+      {items.length===0
+        ? <p className="notif-empty">You are all caught up.</p>
+        : <ul className="notif-list">{items.map(n=>
+            <li key={n.id} className={n.read?'':'unread'}>
+              <button type="button" onClick={()=>openOne(n)}>
+                <span className="notif-title">{n.title}</span>
+                {n.body&&<span className="notif-body">{n.body}</span>}
+                <span className="notif-time">{dateTime(n.created_at)}</span>
+              </button>
+            </li>)}</ul>}
+    </div>}
+  </div>;
+}
 function Header(){
   const {session,profile,signOut}=useAuth();
   const {items}=useCart();
@@ -112,6 +162,7 @@ function Header(){
         {profile?.role==='admin'&&<NavLink to="/admin" onClick={()=>setMenuOpen(false)}>Admin</NavLink>}
       </nav>
       <div className="header-actions">
+        <NotificationBell/>
         {(() => { const count = items.reduce((a,i)=>a+i.quantity,0); return <Link to="/checkout">Cart <b key={count} className={count>0?'cart-count':''}>{count}</b></Link>; })()}
         {session?<button className="link-button" onClick={signOut}>Sign out</button>:<Link className="button small" to="/sign-in">Sign in</Link>}
       </div>
