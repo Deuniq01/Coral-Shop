@@ -32,6 +32,8 @@ export default defineConfig({
         // SPA: serve the app shell for navigations that are not precached files.
         navigateFallback: '/index.html',
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+        // Pull our Web Push handlers into the generated service worker.
+        importScripts: ['push-sw.js'],
         runtimeCaching: [
           {
             // Product photos served from Supabase Storage.

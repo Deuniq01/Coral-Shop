@@ -8,6 +8,7 @@ import { assistantReply } from './assistant.js';
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 const configured = Boolean(url && key && !url.includes('your-project'));
 const supabase = configured ? createClient(url, key) : null;
 const Auth = createContext(null); const Cart = createContext(null);
@@ -92,7 +93,58 @@ function NotificationBell(){
                 <span className="notif-time">{dateTime(n.created_at)}</span>
               </button>
             </li>)}</ul>}
+      <PushToggle/>
     </div>}
+  </div>;
+}
+function urlB64ToUint8(base64String){
+  const padding='='.repeat((4-base64String.length%4)%4);
+  const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');
+  const raw=atob(base64); const arr=new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) arr[i]=raw.charCodeAt(i);
+  return arr;
+}
+function PushToggle(){
+  const {session}=useAuth();
+  const supported=typeof navigator!=='undefined'&&'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+  const [state,setState]=useState('off'); // off | on | busy | denied
+  useEffect(()=>{
+    if(!supported||!session||!vapidKey) return;
+    let active=true;
+    navigator.serviceWorker.ready
+      .then(reg=>reg.pushManager.getSubscription())
+      .then(sub=>{ if(active) setState(sub?'on':(Notification.permission==='denied'?'denied':'off')); })
+      .catch(()=>{});
+    return ()=>{ active=false; };
+  },[session]);
+  if(!supported||!session||!vapidKey) return null;
+  const enable=async()=>{
+    setState('busy');
+    try{
+      const perm=await Notification.requestPermission();
+      if(perm!=='granted'){ setState(perm==='denied'?'denied':'off'); return; }
+      const reg=await navigator.serviceWorker.ready;
+      const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToUint8(vapidKey)});
+      const j=sub.toJSON();
+      const {error}=await supabase.from('push_subscriptions').upsert({endpoint:sub.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth},{onConflict:'endpoint'});
+      setState(error?'off':'on');
+    }catch(e){ setState('off'); }
+  };
+  const disable=async()=>{
+    setState('busy');
+    try{
+      const reg=await navigator.serviceWorker.ready;
+      const sub=await reg.pushManager.getSubscription();
+      if(sub){ await supabase.from('push_subscriptions').delete().eq('endpoint',sub.endpoint); await sub.unsubscribe(); }
+      setState('off');
+    }catch(e){ setState('on'); }
+  };
+  return <div className="notif-push">
+    {state==='denied'
+      ? <span className="notif-push-note">Device alerts are blocked in your browser settings.</span>
+      : state==='on'
+        ? <button type="button" className="link-button" onClick={disable}>Turn off device alerts</button>
+        : <button type="button" className="link-button" onClick={enable} disabled={state==='busy'}>{state==='busy'?'Working...':'Turn on device alerts'}</button>}
   </div>;
 }
 function Header(){
