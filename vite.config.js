@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  // The shop is served under /shop; the marketing landing page owns the root.
+  base: '/shop/',
+  build: { outDir: 'dist/shop', emptyOutDir: true },
   plugins: [
     react(),
     // Makes the shop installable and available offline. The service worker is
@@ -20,17 +23,17 @@ export default defineConfig({
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
-        scope: '/',
+        start_url: '/shop/',
+        scope: '/shop/',
         icons: [
-          { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/pwa-maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'pwa-maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ]
       },
       workbox: {
         // SPA: serve the app shell for navigations that are not precached files.
-        navigateFallback: '/index.html',
+        navigateFallback: '/shop/index.html',
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
         // Pull our Web Push handlers into the generated service worker.
         importScripts: ['push-sw.js'],

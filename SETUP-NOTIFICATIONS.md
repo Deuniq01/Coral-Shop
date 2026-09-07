@@ -171,6 +171,40 @@ builds on push; the service worker, offline caching, and push handler ship with 
 
 ---
 
+## Part I - Landing at /, shop at /shop (single Vercel project)
+
+The site was restructured so the marketing landing page is the front door at `/` and the
+React shop lives under `/shop`, all from ONE Vercel project (the existing
+`coral-shopping-phi.vercel.app`). How it works:
+
+- `vite.config.js` sets `base: '/shop/'` and `build.outDir: 'dist/shop'`, so the shop builds
+  under `/shop`. The router uses `basename="/shop"` and the PWA scope/start_url are `/shop/`.
+- `npm run build` runs `vite build` then `node scripts/assemble-site.mjs`, which copies the
+  `landing/` folder into the root of `dist/`. Final layout: `dist/index.html` (landing) and
+  `dist/shop/index.html` (shop).
+- The root `vercel.json` serves the landing at `/`, falls back unknown `/shop/*` routes to
+  the shop SPA shell, and 301-redirects the old shop URLs (`/products`, `/orders`, `/admin`,
+  etc.) to their `/shop/...` equivalents so old bookmarks and links still work.
+
+Action items for this project:
+
+1. This is now a SINGLE Vercel project. If you still have a SEPARATE landing project pointed
+   at the old landing URL, delete it (or leave it, but it is now redundant). The shop project
+   is the one that serves everything.
+2. In the shop project's Vercel settings, make sure the Root Directory is the repo root (not
+   `landing/`) and the Output Directory is `dist` (the root `vercel.json` already declares
+   this).
+3. The shop is now reached at `https://coral-shopping-phi.vercel.app/shop`. Update
+   `SITE_URL` for the Edge Functions to the shop path so email/push links land in the app:
+   `supabase secrets set SITE_URL=https://coral-shopping-phi.vercel.app/shop`
+4. In Supabase Auth -> URL Configuration, set the Site URL / redirect allow-list to include
+   `https://coral-shopping-phi.vercel.app/shop` (sign-up confirmation now returns to /shop).
+
+The old standalone `landing/vercel.json` is intentionally NOT copied into the build; the root
+`vercel.json` is authoritative for the combined site.
+
+---
+
 ## Part H - Test checklist
 
 1. In-app: place a test order as a customer; the admin bell should show "New order".

@@ -2,8 +2,18 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "redirects": [
+    { "source": "/products", "destination": "/shop/products", "permanent": true },
+    { "source": "/products/:slug", "destination": "/shop/products/:slug", "permanent": true },
+    { "source": "/checkout", "destination": "/shop/checkout", "permanent": true },
+    { "source": "/sign-in", "destination": "/shop/sign-in", "permanent": true },
+    { "source": "/orders", "destination": "/shop/orders", "permanent": true },
+    { "source": "/dashboard", "destination": "/shop/dashboard", "permanent": true },
+    { "source": "/admin", "destination": "/shop/admin", "permanent": true }
+  ],
   "rewrites": [
-    { "source": "/((?!assets/).*)", "destination": "/index.html" }
+    { "source": "/shop", "destination": "/shop/index.html" },
+    { "source": "/shop/((?!assets/).*)", "destination": "/shop/index.html" }
   ],
   "headers": [
     {
@@ -13,7 +23,12 @@
         { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
-        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" }
+      ]
+    },
+    {
+      "source": "/shop/(.*)",
+      "headers": [
         { "key": "Content-Security-Policy", "value": "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'self'; base-uri 'self'; form-action 'self'" }
       ]
     }

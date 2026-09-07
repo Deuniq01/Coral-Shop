@@ -4,7 +4,8 @@
 // development and on preview environments.
 
 export const brand = {
-  logo: '/logo.png',
+  // BASE_URL is '/shop/' in production so the logo resolves under the shop base.
+  logo: import.meta.env.BASE_URL + 'logo.png',
 };
 
 // Bank details shown to customers for bank-transfer payment (checkout and
