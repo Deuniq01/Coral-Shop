@@ -147,11 +147,10 @@ function PushToggle(){
         : <button type="button" className="link-button" onClick={enable} disabled={state==='busy'}>{state==='busy'?'Working...':'Turn on device alerts'}</button>}
   </div>;
 }
-function Header(){
+function Header({navOpen,onToggle}){
   const {session,profile,signOut}=useAuth();
   const {items}=useCart();
   const nav=useNavigate();
-  const [menuOpen,setMenuOpen]=useState(false);
   const [q,setQ]=useState('');
   const [catalogue,setCatalogue]=useState(headerProducts||[]);
   const [open,setOpen]=useState(false);
@@ -170,8 +169,8 @@ function Header(){
   const term=q.trim().toLowerCase();
   const results=term?catalogue.filter(p=>((p.name||'')+' '+(p.category?.name||'')).toLowerCase().includes(term)).slice(0,6):[];
   const close=()=>{ setOpen(false); setActive(-1); };
-  const goSearch=e=>{ if(e&&e.preventDefault) e.preventDefault(); const query=q.trim(); close(); setMenuOpen(false); if(query) nav('/products?q='+encodeURIComponent(query)); };
-  const goProduct=p=>{ setQ(''); close(); setMenuOpen(false); nav('/products/'+(p.slug||p.id)); };
+  const goSearch=e=>{ if(e&&e.preventDefault) e.preventDefault(); const query=q.trim(); close(); if(query) nav('/products?q='+encodeURIComponent(query)); };
+  const goProduct=p=>{ setQ(''); close(); nav('/products/'+(p.slug||p.id)); };
   const onKey=e=>{
     if(!open||!results.length){ if(e.key==='ArrowDown'&&results.length){ e.preventDefault(); setOpen(true); setActive(0); } return; }
     if(e.key==='ArrowDown'){ e.preventDefault(); setActive(a=>Math.min(a+1,results.length-1)); }
@@ -181,10 +180,10 @@ function Header(){
   };
   return (
     <header>
-      <button className="menu-toggle" aria-label="Toggle menu" aria-expanded={menuOpen} onClick={()=>setMenuOpen(o=>!o)}>
+      <button className="menu-toggle" aria-label="Toggle menu" aria-expanded={navOpen} onClick={onToggle}>
         <span></span><span></span><span></span>
       </button>
-      <Link className="brand" to="/" onClick={()=>setMenuOpen(false)}>
+      <Link className="brand" to="/">
         <img src={brand.logo} alt="Coral Shopping" />
       </Link>
       <form className="search" onSubmit={goSearch} role="search" ref={boxRef}>
@@ -207,12 +206,6 @@ function Header(){
         </ul>}
         {open&&term&&results.length===0&&catalogue.length>0&&<ul className="search-suggest" role="listbox"><li className="search-suggest-empty">No matches. Press Enter to search everything.</li></ul>}
       </form>
-      <nav className={menuOpen?'open':''}>
-        <NavLink to="/products" onClick={()=>setMenuOpen(false)}>Shop</NavLink>
-        {session&&<NavLink to="/orders" onClick={()=>setMenuOpen(false)}>Orders</NavLink>}
-        {session&&<NavLink to="/dashboard" onClick={()=>setMenuOpen(false)}>Dashboard</NavLink>}
-        {profile?.role==='admin'&&<NavLink to="/admin" onClick={()=>setMenuOpen(false)}>Admin</NavLink>}
-      </nav>
       <div className="header-actions">
         <NotificationBell/>
         {(() => { const count = items.reduce((a,i)=>a+i.quantity,0); return <Link to="/checkout">Cart <b key={count} className={count>0?'cart-count':''}>{count}</b></Link>; })()}
@@ -322,13 +315,56 @@ function ChatLauncher(){
     </>
   );
 }
-function Layout({children}){return <><Header/><main>{children}</main><Footer/><ChatLauncher/></>}
+function Icon({name}){
+  const paths={
+    home:<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>,
+    bag:<><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></>,
+    box:<><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></>,
+    grid:<><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></>,
+    sliders:<><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></>,
+    external:<><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></>
+  };
+  return <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
+}
+function Sidebar({close}){
+  const {session,profile}=useAuth();
+  return (
+    <aside className="shop-sidebar">
+      <div className="ss-head"><Link className="ss-brand" to="/" onClick={close}><img src={brand.logo} alt="Coral Shopping"/></Link></div>
+      <nav className="ss-nav">
+        <p className="ss-label">Browse</p>
+        <NavLink to="/" end onClick={close}><span className="ss-ico"><Icon name="home"/></span><span className="ss-txt">Home</span></NavLink>
+        <NavLink to="/products" onClick={close}><span className="ss-ico"><Icon name="bag"/></span><span className="ss-txt">Shop</span></NavLink>
+        {session&&<NavLink to="/orders" onClick={close}><span className="ss-ico"><Icon name="box"/></span><span className="ss-txt">Orders</span></NavLink>}
+        {session&&<NavLink to="/dashboard" onClick={close}><span className="ss-ico"><Icon name="grid"/></span><span className="ss-txt">Dashboard</span></NavLink>}
+        {profile?.role==='admin'&&<NavLink to="/admin" onClick={close}><span className="ss-ico"><Icon name="sliders"/></span><span className="ss-txt">Admin</span></NavLink>}
+      </nav>
+      <div className="ss-foot"><a href="/" className="ss-site"><span className="ss-ico"><Icon name="external"/></span><span className="ss-txt">Main site</span></a></div>
+    </aside>
+  );
+}
+function Layout({children}){
+  const [navOpen,setNavOpen]=useState(false);
+  const close=()=>setNavOpen(false);
+  return (
+    <div className={'app-shell'+(navOpen?' nav-open':'')}>
+      <Sidebar close={close}/>
+      <div className="ss-backdrop" onClick={close}></div>
+      <div className="main-col">
+        <Header navOpen={navOpen} onToggle={()=>setNavOpen(o=>!o)}/>
+        <main>{children}</main>
+        <Footer/>
+      </div>
+      <ChatLauncher/>
+    </div>
+  );
+}
 function Notice({children,kind='info'}){return <div className={'notice '+kind}>{children}</div>}
 
 // Animates a small dot from the clicked button to the cart in the header.
 function flyToCart(fromEl){
   if(!fromEl||typeof document==='undefined') return;
-  const target=document.querySelector('.header-actions a[href="/checkout"]');
+  const target=document.querySelector('.header-actions a[href$="/checkout"]');
   if(!target) return;
   const a=fromEl.getBoundingClientRect(), b=target.getBoundingClientRect();
   const dot=document.createElement('div');
@@ -732,7 +768,7 @@ function AdminCustomRequests({requests,reload,message}){
   if(!requests.length) return <Notice>No custom shopping requests yet.</Notice>;
   return <div className="orders">{requests.map(r=><article className="order card" key={r.id}><div className="order-head"><div><span className={'status '+r.status}>{r.status}</span><h3>{r.name}</h3><small>{r.phone} · {dateTime(r.created_at)}</small></div>{r.budget&&<b>{r.budget}</b>}</div><p style={{display:'block'}}>{r.items}</p><div className="admin-action">{r.status!=='contacted'&&r.status!=='closed'&&<button onClick={()=>update(r.id,'contacted')}>Mark contacted</button>}{r.status!=='closed'&&<button className="secondary" onClick={()=>update(r.id,'closed')}>Mark closed</button>}</div></article>)}</div>;
 }
-function AdminOrders({orders,reload,message}){const [details,setDetails]=useState({});const confirm=async id=>{const d=details[id]||{};const {error}=await supabase.rpc('confirm_payment',{order_id:id,scheduled_at:d.date?new Date(d.date).toISOString():null,note:d.note||null});if(error)return alert(error.message);message('Payment confirmed and delivery information saved.');reload()};const fulfill=async(id,status)=>{const {error}=await supabase.rpc('update_order_fulfillment',{order_id:id,next_status:status,scheduled_at:null,note:null});if(error)return alert(error.message);message('Order status updated.');reload()};if(!orders.length)return <Notice>No orders yet. Orders placed by customers will appear here as soon as they come in.</Notice>;return <div className="orders">{orders.map(o=><article className="order card" key={o.id}><div className="order-head"><div><span className={'status '+o.status}>{o.status.replace('_',' ')}</span><h3>#{o.id.slice(0,8)} · {o.profiles?.full_name||'Customer'}</h3><small>{o.profiles?.email} · {o.shipping_phone}</small></div><b>{money(o.total)}</b></div><p>{o.shipping_address}, {o.shipping_city}, {o.shipping_state}</p>{o.order_items.map(i=><p key={i.id}>{i.product_name} × {i.quantity}</p>)}{o.status==='pending'&&<div className="admin-action"><label>Delivery date & time<input type="datetime-local" onChange={e=>setDetails({...details,[o.id]:{...(details[o.id]||{}),date:e.target.value}})}/></label><label>Delivery note<input placeholder="Optional note" onChange={e=>setDetails({...details,[o.id]:{...(details[o.id]||{}),note:e.target.value}})}/></label><button onClick={()=>confirm(o.id)}>Payment received - mark paid</button></div>}{['paid','processing','shipped'].includes(o.status)&&<div className="admin-action"><button onClick={()=>fulfill(o.id,o.status==='paid'?'processing':o.status==='processing'?'shipped':'delivered')}>Mark {o.status==='paid'?'processing':o.status==='processing'?'shipped':'delivered'}</button>{o.delivery_scheduled_at&&<small>Scheduled: {dateTime(o.delivery_scheduled_at)}</small>}</div>}<OrderThread orderId={o.id} admin/></article>)}</div>}
+function AdminOrders({orders,reload,message}){const [details,setDetails]=useState({});const confirm=async id=>{const d=details[id]||{};const {error}=await supabase.rpc('confirm_payment',{order_id:id,scheduled_at:d.date?new Date(d.date).toISOString():null,note:d.note||null});if(error)return alert(error.message);message('Payment confirmed and delivery information saved.');reload()};const fulfill=async(id,status)=>{const {error}=await supabase.rpc('update_order_fulfillment',{order_id:id,next_status:status,scheduled_at:null,note:null});if(error)return alert(error.message);message('Order status updated.');reload()};const toLocalInput=iso=>{if(!iso)return '';const d=new Date(iso);const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`};const saveSchedule=async o=>{const d=details[o.id]||{};const dateStr=d.date!==undefined?d.date:toLocalInput(o.delivery_scheduled_at);const scheduled=dateStr?new Date(dateStr).toISOString():null;const note=d.note!==undefined?d.note:(o.delivery_note||'');const {error}=await supabase.rpc('set_delivery_schedule',{order_id:o.id,scheduled_at:scheduled,note:note||null});if(error)return alert(error.message);message('Delivery schedule updated.');reload()};if(!orders.length)return <Notice>No orders yet. Orders placed by customers will appear here as soon as they come in.</Notice>;return <div className="orders">{orders.map(o=><article className="order card" key={o.id}><div className="order-head"><div><span className={'status '+o.status}>{o.status.replace('_',' ')}</span><h3>#{o.id.slice(0,8)} · {o.profiles?.full_name||'Customer'}</h3><small>{o.profiles?.email} · {o.shipping_phone}</small></div><b>{money(o.total)}</b></div><p>{o.shipping_address}, {o.shipping_city}, {o.shipping_state}</p>{o.order_items.map(i=><p key={i.id}>{i.product_name} × {i.quantity}</p>)}{o.status==='pending'&&<div className="admin-action"><label>Delivery date & time<input type="datetime-local" onChange={e=>setDetails({...details,[o.id]:{...(details[o.id]||{}),date:e.target.value}})}/></label><label>Delivery note<input placeholder="Optional note" onChange={e=>setDetails({...details,[o.id]:{...(details[o.id]||{}),note:e.target.value}})}/></label><button onClick={()=>confirm(o.id)}>Payment received - mark paid</button></div>}{['paid','processing','shipped'].includes(o.status)&&<div className="admin-action"><button onClick={()=>fulfill(o.id,o.status==='paid'?'processing':o.status==='processing'?'shipped':'delivered')}>Mark {o.status==='paid'?'processing':o.status==='processing'?'shipped':'delivered'}</button>{o.delivery_scheduled_at?<small>Scheduled: {dateTime(o.delivery_scheduled_at)}{o.delivery_note&&` · ${o.delivery_note}`}</small>:<small>No delivery scheduled yet</small>}<details className="sched-edit"><summary>{o.delivery_scheduled_at?'Edit delivery schedule':'Set delivery schedule'}</summary><label>Delivery date & time<input type="datetime-local" defaultValue={toLocalInput(o.delivery_scheduled_at)} onChange={e=>setDetails({...details,[o.id]:{...(details[o.id]||{}),date:e.target.value}})}/></label><label>Delivery note<input placeholder="Optional note" defaultValue={o.delivery_note||''} onChange={e=>setDetails({...details,[o.id]:{...(details[o.id]||{}),note:e.target.value}})}/></label><button onClick={()=>saveSchedule(o)}>Save delivery schedule</button></details></div>}<OrderThread orderId={o.id} admin/></article>)}</div>}
 function AdminReviews({reviews,reload,message}){
   const act=async(id,status)=>{const {error}=await supabase.rpc('set_review_status',{p_id:id,p_status:status});if(error)return alert(error.message);message('Review '+status+'.');reload()};
   const remove=async id=>{if(!window.confirm('Delete this review permanently?'))return;const {error}=await supabase.from('reviews').delete().eq('id',id);if(error)return alert(error.message);message('Review deleted.');reload()};

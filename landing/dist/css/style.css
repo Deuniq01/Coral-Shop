@@ -1503,8 +1503,10 @@ aside:not(:has(:checked))
 .faq-answer p {
   margin: 0 0 18px;
   color: var(--dl-color-theme-neutral-dark);
-  line-height: 1.6;
+  font-size: 1.125rem;
+  line-height: 1.75;
 }
+.faq-question { font-size: 1.15rem; }
 
 /* Initials avatars for testimonials (self-hosted, no external portraits). */
 .testimonial-avatar {
@@ -1533,3 +1535,7 @@ aside:not(:has(:checked))
   line-height: 1;
   user-select: none;
 }
+
+/* Star rating row for live customer reviews (rendered as testimonial cards). */
+.live-reviews__stars { color: #FFCC29; font-size: 1.05rem; letter-spacing: 2px; margin: 4px 0 2px; display: block; }
+.live-reviews__stars .off { color: #e3e3e3; }

@@ -46,6 +46,7 @@ If you have not already applied these earlier files, run them too (safe to re-ru
 - `supabase/profile_self_update.sql`  (lets customers edit their own profile)
 - `supabase/order_status_guard.sql`   (server-side order status transition guard)
 - `supabase/add_profile_email.sql`    (email column on profiles; required for email routing)
+- `supabase/edit_delivery_schedule.sql` (lets an admin set/edit the delivery date + note after an order is already paid; notifies the customer)
 
 Sanity check after running: the SQL editor should report success with no red errors, and
 `select * from public.notifications limit 1;` should work (empty result is fine).

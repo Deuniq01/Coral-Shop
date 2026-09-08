@@ -172,11 +172,22 @@
                       <path d="M3 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5M3 6a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 6m0 2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5"/>
                     </svg> 
                   </span> 
-                  <span class="text">Testimonial</span> 
-                </a> 
+                  <span class="text">Testimonial</span>
+                </a>
               </li>
-              <li class="sidebar__item"> 
-                <a class="sidebar__link" href="#contact" data-tooltip="Contact"> 
+              <li class="sidebar__item">
+                <a class="sidebar__link" href="#faq" data-tooltip="FAQ">
+                  <span class="icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-question-circle" viewBox="0 0 16 16">
+                      <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/>
+                      <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94"/>
+                    </svg>
+                  </span>
+                  <span class="text">FAQ</span>
+                </a>
+              </li>
+              <li class="sidebar__item">
+                <a class="sidebar__link" href="#contact" data-tooltip="Contact">
                   <span class="icon"> 
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-lines-fill" viewBox="0 0 16 16">
                       <path d="M6 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m-5 6s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zM11 3.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 1-.5-.5m.5 2.5a.5.5 0 0 0 0 1h4a.5.5 0 0 0 0-1zm2 3a.5.5 0 0 0 0 1h2a.5.5 0 0 0 0-1zm0 3a.5.5 0 0 0 0 1h2a.5.5 0 0 0 0-1z"/>
@@ -1827,9 +1838,12 @@
             </div>
             <div class="row">
               <div class="col-lg-12 col-md-10">
-                <div id="live-reviews" class="live-reviews" hidden>
-                  <h3 class="live-reviews__title">More from our customers</h3>
-                  <div class="live-reviews__grid" id="live-reviews-grid"></div>
+                <div id="live-reviews" class="testimonial17-wrapper" hidden>
+                  <div class="thq-section-padding">
+                    <div class="testimonial17-max-width thq-section-max-width">
+                      <div class="thq-grid-2" id="live-reviews-grid"></div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2128,6 +2142,30 @@
             Array(n + 1).join('★') +
             '<span class="off">' + Array(6 - n).join('★') + '</span></span>';
         }
+        var AV_COLORS = ['#c4462f', '#00018F', '#2fa565', '#d98a00', '#7048c4', '#0f8ea8'];
+        function initials(name) {
+          var parts = String(name || 'Customer').trim().split(/\s+/);
+          var s = (parts[0] || '').charAt(0) + (parts.length > 1 ? parts[parts.length - 1].charAt(0) : '');
+          return s.toUpperCase() || 'C';
+        }
+        function card(x, i) {
+          var name = x.author_name || 'Customer';
+          var color = AV_COLORS[i % AV_COLORS.length];
+          return '' +
+            '<div class="thq-animated-card-bg-2"><div class="thq-animated-card-bg-1">' +
+              '<div data-animated="true" class="thq-card testimonial17-card2">' +
+                '<div class="testimonial17-container14">' +
+                  '<div class="testimonial17-image2 testimonial-avatar" style="background:' + color + '" role="img" aria-label="' + esc(name) + '">' + esc(initials(name)) + '</div>' +
+                  '<div class="testimonial17-container15">' +
+                    '<strong class="thq-body-large">' + esc(name) + '</strong>' +
+                    '<span class="thq-body-small">Verified customer</span>' +
+                  '</div>' +
+                '</div>' +
+                stars(x.rating) +
+                '<span class="testimonial17-text17 thq-body-small">' + esc(x.body) + '</span>' +
+              '</div>' +
+            '</div></div>';
+        }
         fetch(ENDPOINT, { headers: { Accept: 'application/json' } })
           .then(function (r) { return r.ok ? r.json() : { reviews: [] }; })
           .then(function (d) {
@@ -2136,13 +2174,7 @@
             var grid = document.getElementById('live-reviews-grid');
             var box = document.getElementById('live-reviews');
             if (!grid || !box) return;
-            grid.innerHTML = list.map(function (x) {
-              return '<figure class="live-reviews__card">' +
-                stars(x.rating) +
-                '<blockquote class="live-reviews__text">' + esc(x.body) + '</blockquote>' +
-                '<figcaption class="live-reviews__name">' + esc(x.author_name || 'Customer') + '</figcaption>' +
-                '</figure>';
-            }).join('');
+            grid.innerHTML = list.map(card).join('');
             box.hidden = false;
           })
           .catch(function () {});
