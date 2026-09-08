@@ -1,0 +1,180 @@
+/* ==========================================================================
+   Coral theme override: re-skins the marketing landing page to match the
+   look and feel of the /shop app (src/styles.css).
+
+   Loaded LAST in index.html so these rules win over style.css and index.css.
+   Scope: typography, buttons, cards, inputs, and the sidebar look ONLY.
+   The page structure, sections, copy and the sidebar collapse mechanism are
+   left untouched. The colour palette already matched the shop, so this file
+   is mostly about type, radii, borders, shadows and the sidebar surface.
+   ========================================================================== */
+
+/* Shop design tokens (mirror of src/styles.css :root) */
+:root {
+  --coral-primary: #00018F;
+  --coral-primary-hover: #2b2f86;
+  --coral-accent: #FFCC29;
+  --coral-coral: #FF7F50;
+  --coral-ink: #2C3E50;
+  --coral-muted: #7F8C8D;
+  --coral-line: #F0E8EC;
+  --coral-secondary: #FFF8D6;
+  --coral-surface-alt: #f5f6fb;
+
+  /* Retune the template's shared radii to the shop's softer, smaller values */
+  --dl-layout-radius-buttonradius: 8px;
+  --dl-layout-radius-inputradius: 8px;
+  --dl-layout-radius-cardradius: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   1. Typography: one typeface everywhere, like the shop (Inter).
+   Uses !important purely to defeat the template's explicit STIX / Noto /
+   Poppins declarations. Font family is cosmetic and cannot break layout.
+   Icon fonts (FontAwesome / Bootstrap) are deliberately NOT targeted.
+   -------------------------------------------------------------------------- */
+body,
+h1, h2, h3, h4, h5, h6,
+p, a, span, li, label, small, blockquote,
+input, textarea, select, button,
+.thq-heading-1, .thq-heading-2, .thq-heading-3,
+.thq-body-large, .thq-body-small,
+.thq-button-filled, .thq-button-outline, .thq-button-flat, .thq-button-animated,
+.button, .Content,
+.sidebar__link, .text, .user-id, .user-role, .sidebar__item--heading,
+.faq-question, .faq-answer, .faq-answer p,
+.pricing14-section-title, .testimonial17-text17 {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* Shop headings: heavier weight, tighter tracking */
+.thq-heading-1, .thq-heading-2, .thq-heading-3,
+h1, h2, h3 {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+body {
+  color: var(--coral-ink);
+  background: #fff;
+}
+
+/* --------------------------------------------------------------------------
+   2. Buttons: match the shop (solid blue primary with white text, pale-yellow
+   secondary with blue text). Radii already retuned above via the shared vars.
+   -------------------------------------------------------------------------- */
+.thq-button-filled {
+  background-color: var(--coral-primary);
+  border-color: var(--coral-primary);
+  color: #fff;
+  fill: #fff;
+  font-weight: 600;
+}
+.thq-button-filled:hover {
+  background-color: var(--coral-primary-hover);
+  border-color: var(--coral-primary-hover);
+  color: #fff;
+  fill: #fff;
+}
+
+.thq-button-outline,
+.thq-button-flat {
+  background-color: var(--coral-secondary);
+  border-color: var(--coral-line);
+  color: var(--coral-primary);
+  fill: var(--coral-primary);
+  font-weight: 600;
+}
+.thq-button-outline:hover,
+.thq-button-flat:hover {
+  background-color: var(--coral-accent);
+  border-color: var(--coral-accent);
+  color: var(--coral-ink);
+  fill: var(--coral-ink);
+}
+
+/* --------------------------------------------------------------------------
+   3. Cards and surfaces: shop's thin border + soft blue shadow, 12px radius.
+   -------------------------------------------------------------------------- */
+.thq-card {
+  background: #fff;
+  border: 1px solid var(--coral-line);
+  border-radius: 12px;
+  box-shadow: 0 4px 18px #00018f12;
+}
+
+/* Alternating "light" sections use the shop's pale yellow instead of lavender */
+.light-background {
+  --background-color: var(--coral-secondary);
+  --surface-color: #fff;
+}
+
+/* Inputs: shop focus ring */
+.thq-input:focus,
+input:focus, textarea:focus, select:focus {
+  outline: 2px solid #00018f33;
+  border-color: var(--coral-primary);
+}
+
+/* --------------------------------------------------------------------------
+   4. Sidebar: give the landing's collapsible rail the shop's clean white
+   surface and active/hover states. The collapse mechanism (checkbox, widths,
+   tooltips) is defined in style.css and is intentionally left alone.
+   -------------------------------------------------------------------------- */
+.vertical-sidebar nav {
+  background: #fff;
+  border-right: 1px solid var(--coral-line);
+  border-radius: 0;
+  box-shadow: 0 4px 18px #00018f0f;
+}
+
+.sidebar__item--heading {
+  color: var(--coral-muted);
+  font-weight: 700;
+  letter-spacing: 0.6px;
+}
+
+.sidebar__link {
+  border-radius: 12px;
+}
+.sidebar__link .text {
+  color: var(--coral-ink);
+  font-weight: 600;
+}
+.sidebar__link .icon svg {
+  fill: var(--coral-muted);
+}
+
+.vertical-sidebar .sidebar__link:hover {
+  background: var(--coral-surface-alt);
+}
+.vertical-sidebar .sidebar__link:hover .icon svg {
+  fill: var(--coral-primary);
+}
+.vertical-sidebar .sidebar__link:hover .text {
+  color: var(--coral-primary);
+}
+
+/* Active (scrollspy) link: shop's pale-yellow pill, blue label, coral icon */
+.vertical-sidebar .sidebar__link.active {
+  background: var(--coral-secondary);
+}
+.vertical-sidebar .sidebar__link.active .icon svg {
+  fill: var(--coral-coral) !important;
+}
+.vertical-sidebar .sidebar__link.active .text {
+  color: var(--coral-primary) !important;
+  font-weight: 600;
+}
+
+.user-id { color: var(--coral-ink); }
+.user-role { color: var(--coral-muted); }
+
+.nav__toggle:hover { outline-color: var(--coral-primary); }
+.toggle--icons:hover .toggle-svg-icon { fill: var(--coral-primary); }
+
+/* --------------------------------------------------------------------------
+   5. Links / small accents to match the shop.
+   -------------------------------------------------------------------------- */
+.faq-question,
+.faq-icon { color: var(--coral-primary); }

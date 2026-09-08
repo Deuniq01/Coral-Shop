@@ -322,33 +322,39 @@ function Icon({name}){
     box:<><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></>,
     grid:<><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></>,
     sliders:<><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></>,
-    external:<><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></>
+    external:<><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></>,
+    chevron:<><polyline points="15 18 9 12 15 6"/></>
   };
   return <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
-function Sidebar({close}){
+function Sidebar({close,collapsed,onCollapse}){
   const {session,profile}=useAuth();
   return (
     <aside className="shop-sidebar">
-      <div className="ss-head"><Link className="ss-brand" to="/" onClick={close}><img src={brand.logo} alt="Coral Shopping"/></Link></div>
+      <div className="ss-head">
+        <button className="ss-collapse" onClick={onCollapse} aria-label={collapsed?'Expand sidebar':'Collapse sidebar'} aria-pressed={collapsed} title={collapsed?'Expand sidebar':'Collapse sidebar'}><Icon name="chevron"/></button>
+        <Link className="ss-brand" to="/" onClick={close}><img src={brand.logo} alt="Coral Shopping"/></Link>
+      </div>
       <nav className="ss-nav">
         <p className="ss-label">Browse</p>
-        <NavLink to="/" end onClick={close}><span className="ss-ico"><Icon name="home"/></span><span className="ss-txt">Home</span></NavLink>
-        <NavLink to="/products" onClick={close}><span className="ss-ico"><Icon name="bag"/></span><span className="ss-txt">Shop</span></NavLink>
-        {session&&<NavLink to="/orders" onClick={close}><span className="ss-ico"><Icon name="box"/></span><span className="ss-txt">Orders</span></NavLink>}
-        {session&&<NavLink to="/dashboard" onClick={close}><span className="ss-ico"><Icon name="grid"/></span><span className="ss-txt">Dashboard</span></NavLink>}
-        {profile?.role==='admin'&&<NavLink to="/admin" onClick={close}><span className="ss-ico"><Icon name="sliders"/></span><span className="ss-txt">Admin</span></NavLink>}
+        <NavLink to="/" end onClick={close} data-tooltip="Home"><span className="ss-ico"><Icon name="home"/></span><span className="ss-txt">Home</span></NavLink>
+        <NavLink to="/products" onClick={close} data-tooltip="Shop"><span className="ss-ico"><Icon name="bag"/></span><span className="ss-txt">Shop</span></NavLink>
+        {session&&<NavLink to="/orders" onClick={close} data-tooltip="Orders"><span className="ss-ico"><Icon name="box"/></span><span className="ss-txt">Orders</span></NavLink>}
+        {session&&<NavLink to="/dashboard" onClick={close} data-tooltip="Dashboard"><span className="ss-ico"><Icon name="grid"/></span><span className="ss-txt">Dashboard</span></NavLink>}
+        {profile?.role==='admin'&&<NavLink to="/admin" onClick={close} data-tooltip="Admin"><span className="ss-ico"><Icon name="sliders"/></span><span className="ss-txt">Admin</span></NavLink>}
       </nav>
-      <div className="ss-foot"><a href="/" className="ss-site"><span className="ss-ico"><Icon name="external"/></span><span className="ss-txt">Main site</span></a></div>
+      <div className="ss-foot"><a href="/" className="ss-site" data-tooltip="Main site"><span className="ss-ico"><Icon name="external"/></span><span className="ss-txt">Main site</span></a></div>
     </aside>
   );
 }
 function Layout({children}){
   const [navOpen,setNavOpen]=useState(false);
+  const [collapsed,setCollapsed]=useState(()=>{try{return localStorage.getItem('coral_sidebar_collapsed')==='1'}catch(e){return false}});
   const close=()=>setNavOpen(false);
+  const toggleCollapse=()=>setCollapsed(c=>{const n=!c;try{localStorage.setItem('coral_sidebar_collapsed',n?'1':'0')}catch(e){}return n});
   return (
-    <div className={'app-shell'+(navOpen?' nav-open':'')}>
-      <Sidebar close={close}/>
+    <div className={'app-shell'+(navOpen?' nav-open':'')+(collapsed?' sidebar-collapsed':'')}>
+      <Sidebar close={close} collapsed={collapsed} onCollapse={toggleCollapse}/>
       <div className="ss-backdrop" onClick={close}></div>
       <div className="main-col">
         <Header navOpen={navOpen} onToggle={()=>setNavOpen(o=>!o)}/>
