@@ -323,7 +323,10 @@ function Icon({name}){
     grid:<><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></>,
     sliders:<><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></>,
     external:<><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></>,
-    chevron:<><polyline points="15 18 9 12 15 6"/></>
+    chevron:<><polyline points="15 18 9 12 15 6"/></>,
+    user:<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
+    plus:<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>,
+    chart:<><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>
   };
   return <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
@@ -710,12 +713,18 @@ function Dashboard(){
   return <RequireAuth><Layout><section className="section dashboard">
     <div className="section-title"><div><p className="eyebrow">Your dashboard</p><h1>Welcome back, {name}</h1></div></div>
     <div className="dash-stats">
-      <div className="stat card"><strong>{orders.length}</strong><span>Orders placed</span></div>
-      <div className="stat card"><strong>{active}</strong><span>Active orders</span></div>
-      <div className="stat card"><strong>{requests.length}</strong><span>Custom requests</span></div>
+      <div className="stat card"><span className="stat-ico"><Icon name="box"/></span><div><strong>{orders.length}</strong><span>Orders placed</span></div></div>
+      <div className="stat card"><span className="stat-ico"><Icon name="bag"/></span><div><strong>{active}</strong><span>Active orders</span></div></div>
+      <div className="stat card"><span className="stat-ico"><Icon name="sliders"/></span><div><strong>{requests.length}</strong><span>Custom requests</span></div></div>
     </div>
-    <div className="dash-grid">
-      <div className="dash-col">
+    <div className="quick-actions">
+      <Link className="qa-tile card" to="/products"><span className="qa-ico"><Icon name="bag"/></span><span className="qa-txt"><strong>Continue shopping</strong><small>Browse the catalogue</small></span></Link>
+      <Link className="qa-tile card" to="/orders"><span className="qa-ico"><Icon name="box"/></span><span className="qa-txt"><strong>Track orders</strong><small>Status &amp; delivery</small></span></Link>
+      <a className="qa-tile card" href="/#custom-shop"><span className="qa-ico"><Icon name="plus"/></span><span className="qa-txt"><strong>New request</strong><small>Shop Your Way</small></span></a>
+      <button className="qa-tile card" onClick={()=>document.getElementById('profile')?.scrollIntoView({behavior:'smooth',block:'start'})}><span className="qa-ico"><Icon name="user"/></span><span className="qa-txt"><strong>Edit profile</strong><small>Your details</small></span></button>
+    </div>
+    <div className="dash-layout">
+      <section className="dash-col dash-main">
         <h2>Recent orders</h2>
         {loading?<p>Loading…</p>:!orders.length?<p className="muted">No orders yet. <Link to="/products">Start shopping.</Link></p>:<>
           <div className="orders">{orders.slice(0,5).map(o=><article className="order card" key={o.id}>
@@ -724,19 +733,21 @@ function Dashboard(){
           </article>)}</div>
           <Link className="button small" to="/orders" style={{marginTop:14}}>View all orders</Link>
         </>}
-      </div>
-      <div className="dash-col">
-        <h2>Your custom requests</h2>
-        {loading?<p>Loading…</p>:!requests.length?<p className="muted">Nothing yet. <a href="/#custom-shop">Send a request.</a></p>:<>
-          <div className="orders">{requests.slice(0,5).map(r=><article className="order card" key={r.id}>
-            <div className="order-head"><div><span className={'status '+r.status}>{r.status}</span><h3>{r.name}</h3><small>{dateTime(r.created_at)}</small></div>{r.budget&&<b>{r.budget}</b>}</div>
-            <p style={{display:'block'}}>{(r.items||'').slice(0,90)}{(r.items||'').length>90?'…':''}</p>
-          </article>)}</div>
-          <a className="button small secondary" href="/#custom-shop" style={{marginTop:14}}>New request</a>
-        </>}
-      </div>
-      <ProfileCard/>
-      <ReviewCard/>
+      </section>
+      <aside className="dash-side">
+        <div className="dash-col">
+          <h2>Your custom requests</h2>
+          {loading?<p>Loading…</p>:!requests.length?<p className="muted">Nothing yet. <a href="/#custom-shop">Send a request.</a></p>:<>
+            <div className="orders">{requests.slice(0,5).map(r=><article className="order card" key={r.id}>
+              <div className="order-head"><div><span className={'status '+r.status}>{r.status}</span><h3>{r.name}</h3><small>{dateTime(r.created_at)}</small></div>{r.budget&&<b>{r.budget}</b>}</div>
+              <p style={{display:'block'}}>{(r.items||'').slice(0,90)}{(r.items||'').length>90?'…':''}</p>
+            </article>)}</div>
+            <a className="button small secondary" href="/#custom-shop" style={{marginTop:14}}>New request</a>
+          </>}
+        </div>
+        <div id="profile"><ProfileCard/></div>
+        <ReviewCard/>
+      </aside>
     </div>
     <div className="recs-section">
       <div className="section-title"><div><p className="eyebrow">For you</p><h2>Recommended for you</h2></div></div>
@@ -749,7 +760,7 @@ function Dashboard(){
   </section></Layout></RequireAuth>;
 }
 function Admin(){const {profile}=useAuth();if(profile?.role!=='admin')return <Navigate to="/" replace/>;return <AdminPanel/>}
-function AdminPanel(){const [tab,setTab]=useState('orders'),[orders,setOrders]=useState([]),[products,setProducts]=useState([]),[requests,setRequests]=useState([]),[reviews,setReviews]=useState([]),[msg,setMsg]=useState(''),[errors,setErrors]=useState({}),[loading,setLoading]=useState(true);
+function AdminPanel(){const [tab,setTab]=useState('overview'),[orders,setOrders]=useState([]),[products,setProducts]=useState([]),[requests,setRequests]=useState([]),[reviews,setReviews]=useState([]),[msg,setMsg]=useState(''),[errors,setErrors]=useState({}),[loading,setLoading]=useState(true);
   const load=async()=>{
     setLoading(true);
     const [oq,pq,rq,vq]=await Promise.all([
@@ -763,7 +774,83 @@ function AdminPanel(){const [tab,setTab]=useState('orders'),[orders,setOrders]=u
     setLoading(false);
   };
   useEffect(()=>{load()},[]);
-  return <Layout><section className="section"><p className="eyebrow">Store control</p><h1>Store control centre</h1><div className="tabs"><button className={tab==='orders'?'selected':''} onClick={()=>setTab('orders')}>Orders</button><button className={tab==='custom'?'selected':''} onClick={()=>setTab('custom')}>Custom requests</button><button className={tab==='products'?'selected':''} onClick={()=>setTab('products')}>Products</button><button className={tab==='reviews'?'selected':''} onClick={()=>setTab('reviews')}>Reviews{reviews.filter(r=>r.status==='pending').length?' ('+reviews.filter(r=>r.status==='pending').length+')':''}</button></div>{msg&&<Notice kind="success">{msg}</Notice>}{errors[tab]&&<Notice kind="error">{errors[tab]} <button className="link-button" onClick={load}>Try again</button></Notice>}{loading?<p>Loading…</p>:tab==='orders'?<AdminOrders orders={orders} reload={load} message={setMsg}/>:tab==='custom'?<AdminCustomRequests requests={requests} reload={load} message={setMsg}/>:tab==='reviews'?<AdminReviews reviews={reviews} reload={load} message={setMsg}/>:<AdminProducts products={products} reload={load} message={setMsg}/>}</section></Layout>}
+  return <Layout><section className="section"><p className="eyebrow">Store control</p><h1>Store control centre</h1><div className="tabs"><button className={tab==='overview'?'selected':''} onClick={()=>setTab('overview')}>Overview</button><button className={tab==='orders'?'selected':''} onClick={()=>setTab('orders')}>Orders</button><button className={tab==='custom'?'selected':''} onClick={()=>setTab('custom')}>Custom requests</button><button className={tab==='products'?'selected':''} onClick={()=>setTab('products')}>Products</button><button className={tab==='reviews'?'selected':''} onClick={()=>setTab('reviews')}>Reviews{reviews.filter(r=>r.status==='pending').length?' ('+reviews.filter(r=>r.status==='pending').length+')':''}</button></div>{msg&&<Notice kind="success">{msg}</Notice>}{errors[tab]&&<Notice kind="error">{errors[tab]} <button className="link-button" onClick={load}>Try again</button></Notice>}{loading?<p>Loading…</p>:tab==='overview'?<AdminAnalytics orders={orders} products={products} requests={requests} reviews={reviews}/>:tab==='orders'?<AdminOrders orders={orders} reload={load} message={setMsg}/>:tab==='custom'?<AdminCustomRequests requests={requests} reload={load} message={setMsg}/>:tab==='reviews'?<AdminReviews reviews={reviews} reload={load} message={setMsg}/>:<AdminProducts products={products} reload={load} message={setMsg}/>}</section></Layout>}
+function AdminAnalytics({orders,products,requests,reviews}){
+  const PAID=['paid','processing','shipped','delivered','closed'];
+  const paidOrders=orders.filter(o=>PAID.includes(o.status));
+  const revenue=paidOrders.reduce((s,o)=>s+Number(o.total||0),0);
+  const awaiting=orders.filter(o=>['pending','awaiting_payment'].includes(o.status));
+  const pendingRevenue=awaiting.reduce((s,o)=>s+Number(o.total||0),0);
+  const aov=paidOrders.length?revenue/paidOrders.length:0;
+  const activeCount=orders.filter(o=>!['delivered','closed','cancelled'].includes(o.status)).length;
+  const deliveredCount=orders.filter(o=>['delivered','closed'].includes(o.status)).length;
+  const now=new Date();
+  const months=[];
+  for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push({key:d.getFullYear()+'-'+d.getMonth(),label:d.toLocaleString('en-NG',{month:'short'}),count:0,rev:0});}
+  const mIndex={};months.forEach((m,i)=>{mIndex[m.key]=i;});
+  orders.forEach(o=>{const d=new Date(o.created_at);const k=d.getFullYear()+'-'+d.getMonth();if(k in mIndex){months[mIndex[k]].count++;if(PAID.includes(o.status))months[mIndex[k]].rev+=Number(o.total||0);}});
+  const maxCount=Math.max(1,...months.map(m=>m.count));
+  const catOf={};(products||[]).forEach(p=>{catOf[p.id]=p.category?.name||'Uncategorised';});
+  const prodMap={},catMap={};
+  orders.forEach(o=>(o.order_items||[]).forEach(it=>{
+    const name=it.product_name||'Item';
+    const rev=Number(it.line_total!=null?it.line_total:(Number(it.unit_price||0)*Number(it.quantity||0)));
+    if(!prodMap[name])prodMap[name]={name,qty:0,rev:0};
+    prodMap[name].qty+=Number(it.quantity||0);prodMap[name].rev+=rev;
+    const cat=(it.product_id&&catOf[it.product_id])||'Other';
+    catMap[cat]=(catMap[cat]||0)+rev;
+  }));
+  const topProducts=Object.values(prodMap).sort((a,b)=>b.rev-a.rev).slice(0,6);
+  const maxProdRev=Math.max(1,...topProducts.map(p=>p.rev));
+  const cats=Object.entries(catMap).map(([name,rev])=>({name,rev})).sort((a,b)=>b.rev-a.rev);
+  const catTotal=cats.reduce((s,c)=>s+c.rev,0)||1;
+  const openReq=requests.filter(r=>r.status!=='closed').length;
+  const rvBy=s=>reviews.filter(r=>r.status===s).length;
+  const approved=reviews.filter(r=>r.status==='approved');
+  const avgRating=approved.length?(approved.reduce((s,r)=>s+Number(r.rating||0),0)/approved.length):0;
+  if(!orders.length&&!requests.length&&!reviews.length) return <Notice>No data yet. Once orders, requests and reviews start coming in, your analytics will appear here.</Notice>;
+  return <div className="analytics">
+    <div className="kpi-grid">
+      <div className="kpi card"><span className="kpi-label">Revenue (paid)</span><strong>{money(revenue)}</strong><small>{paidOrders.length} paid order(s)</small></div>
+      <div className="kpi card"><span className="kpi-label">Awaiting payment</span><strong>{money(pendingRevenue)}</strong><small>{awaiting.length} order(s)</small></div>
+      <div className="kpi card"><span className="kpi-label">Total orders</span><strong>{orders.length}</strong><small>{activeCount} active, {deliveredCount} delivered</small></div>
+      <div className="kpi card"><span className="kpi-label">Average order value</span><strong>{money(aov)}</strong><small>across paid orders</small></div>
+    </div>
+    <div className="analytics-grid">
+      <div className="panel card">
+        <h2>Orders over time</h2>
+        <div className="bars">{months.map((m,i)=><div className="bar-col" key={i} title={m.count+' order(s), '+money(m.rev)+' revenue'}>
+          <span className="bar-count">{m.count}</span>
+          <div className="bar" style={{height:Math.round(6+m.count/maxCount*104)+'px'}}></div>
+          <span className="bar-label">{m.label}</span>
+        </div>)}</div>
+        <p className="muted small-note">Bar height reflects order count. Hover a bar to see revenue.</p>
+      </div>
+      <div className="panel card">
+        <h2>Top products</h2>
+        {!topProducts.length?<p className="muted">No items sold yet.</p>:<div className="rankbars">{topProducts.map((p,i)=><div className="rankbar" key={i}>
+          <div className="rankbar-head"><span className="rankbar-name">{p.name}</span><b>{money(p.rev)}</b></div>
+          <div className="rankbar-track"><div className="rankbar-fill" style={{width:Math.round(p.rev/maxProdRev*100)+'%'}}></div></div>
+          <small className="muted">{p.qty} unit(s) sold</small>
+        </div>)}</div>}
+      </div>
+      <div className="panel card">
+        <h2>Sales by category</h2>
+        {!cats.length?<p className="muted">No sales yet.</p>:<ul className="cat-list">{cats.map((c,i)=><li key={i}><span>{c.name}</span><b>{money(c.rev)}</b><small className="muted">{Math.round(c.rev/catTotal*100)}%</small></li>)}</ul>}
+      </div>
+      <div className="panel card">
+        <h2>Requests &amp; reviews</h2>
+        <div className="mini-stats">
+          <div><strong>{requests.length}</strong><span>Custom requests</span></div>
+          <div><strong>{openReq}</strong><span>Open requests</span></div>
+          <div><strong>{avgRating?avgRating.toFixed(1):'-'}</strong><span>Avg rating</span></div>
+          <div><strong>{rvBy('pending')}</strong><span>Reviews to moderate</span></div>
+        </div>
+        <p className="muted small-note">Reviews: {rvBy('approved')} approved, {rvBy('pending')} pending, {rvBy('rejected')} rejected.</p>
+      </div>
+    </div>
+  </div>;
+}
 function AdminCustomRequests({requests,reload,message}){
   const update=async(id,next_status)=>{
     const {error}=await supabase.from('custom_requests').update({status:next_status}).eq('id',id);

@@ -178,3 +178,31 @@ input:focus, textarea:focus, select:focus {
    -------------------------------------------------------------------------- */
 .faq-question,
 .faq-icon { color: var(--coral-primary); }
+
+/* --------------------------------------------------------------------------
+   6. About Us copy: constrain the paragraphs to a comfortable reading width.
+   -------------------------------------------------------------------------- */
+.about-copy { max-width: 780px; margin: 16px auto 0; }
+.about-copy p { margin: 0 0 14px; }
+.about-copy p:last-child { margin-bottom: 0; }
+
+/* --------------------------------------------------------------------------
+   7. Section CTAs (What We Do + How to Order): centre the shop button.
+   -------------------------------------------------------------------------- */
+.section-cta { display: flex; justify-content: center; margin: 8px 0 0; }
+.steps2-section-header .section-cta { justify-content: flex-start; margin-top: 22px; }
+
+/* --------------------------------------------------------------------------
+   8. Testimonials empty state: a light, dashed card shown until approved
+   live reviews load. The script unhides #live-reviews and hides this once
+   real reviews arrive; with none, this stays as a friendly placeholder so
+   the #testimonial nav anchor never lands on an empty section.
+   -------------------------------------------------------------------------- */
+.reviews-empty {
+  text-align: center;
+  padding: 36px 28px;
+  border: 1px dashed var(--coral-line);
+  box-shadow: none;
+}
+.reviews-empty p { margin: 0 0 8px; }
+.reviews-empty p:last-child { margin-bottom: 0; color: var(--coral-muted); }
