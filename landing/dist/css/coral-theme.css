@@ -181,10 +181,19 @@ input:focus, textarea:focus, select:focus {
 
 /* --------------------------------------------------------------------------
    6. About Us copy: constrain the paragraphs to a comfortable reading width.
+   The teleportHQ About containers sit inside a centred flex column, so a
+   block with only a max-width sizes to its max-content (the longest unwrapped
+   line) and on narrow phones spills past both screen edges. Force the whole
+   chain to fill the available width and wrap long words so it never overflows.
    -------------------------------------------------------------------------- */
-.about-copy { max-width: 780px; margin: 16px auto 0; }
-.about-copy p { margin: 0 0 14px; }
+#about .pricing14-section-title,
+#about .pricing14-content { width: 100%; max-width: 100%; box-sizing: border-box; }
+.about-copy { width: 100%; max-width: 780px; margin: 16px auto 0; box-sizing: border-box; }
+.about-copy p { margin: 0 0 14px; overflow-wrap: break-word; }
 .about-copy p:last-child { margin-bottom: 0; }
+@media (max-width: 991px) {
+  .about-copy { padding-left: 14px; padding-right: 14px; }
+}
 
 /* --------------------------------------------------------------------------
    7. Section CTAs (What We Do + How to Order): centre the shop button.
@@ -206,3 +215,19 @@ input:focus, textarea:focus, select:focus {
 }
 .reviews-empty p { margin: 0 0 8px; }
 .reviews-empty p:last-child { margin-bottom: 0; color: var(--coral-muted); }
+
+/* --------------------------------------------------------------------------
+   9. Live reviews grid: the template grid is a fixed two-column layout, so a
+   single approved review sits stranded in the left half and looks small and
+   lopsided (most visible on tablet). Center the cards and give each a bounded,
+   comfortable width so one review reads as a centred card and several wrap
+   neatly. The id selector beats the .thq-grid-2 class it overrides.
+   -------------------------------------------------------------------------- */
+#live-reviews-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 420px));
+  justify-content: center;
+  justify-items: center;
+  gap: 20px;
+}
+#live-reviews-grid > .thq-animated-card-bg-2 { width: 100%; }
