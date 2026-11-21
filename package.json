@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build && node scripts/assemble-site.mjs",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "node --test tests/*.test.mjs",
+    "seo:preview": "node scripts/seo-preview.mjs",
+    "test:browser": "node scripts/seo-browser-smoke.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",

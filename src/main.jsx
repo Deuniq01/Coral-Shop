@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 import './styles.css';
+import PageSeo from './PageSeo.jsx';
+import ShareProduct from './ShareProduct.jsx';
 import { brand, heroImage, aisles, productImage, sampleProducts, bank } from './media.js';
 import { assistantReply } from './assistant.js';
 
@@ -417,7 +419,7 @@ function BankDetails({amount}){
 
 function SignIn(){const nav=useNavigate();const [mode,setMode]=useState('signIn'),[form,setForm]=useState({name:'',email:'',password:''}),[msg,setMsg]=useState(''),[busy,setBusy]=useState(false);if(!configured)return <Setup/>; const submit=async e=>{e.preventDefault();setBusy(true);setMsg('');let result;if(mode==='signIn')result=await supabase.auth.signInWithPassword({email:form.email,password:form.password});else result=await supabase.auth.signUp({email:form.email,password:form.password,options:{data:{full_name:form.name},emailRedirectTo:window.location.origin+import.meta.env.BASE_URL}});setBusy(false);if(result.error)return setMsg(result.error.message);if(mode==='signUp')setMsg('Check your email to confirm your account, then sign in.');else nav('/products')}; return <Layout><section className="auth card"><p className="eyebrow">Your account</p><h1>{mode==='signIn'?'Welcome back':'Create your account'}</h1><p>Sign in is required before checkout so you can track your order and delivery.</p>{msg&&<Notice kind={msg.includes('Check')?'success':'error'}>{msg}</Notice>}<form onSubmit={submit}>{mode==='signUp'&&<label>Full name<input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label>}<label>Email<input type="email" required value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></label><label>Password<input type="password" minLength="8" required value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/></label><button disabled={busy}>{busy?'Please wait…':mode==='signIn'?'Sign in':'Create account'}</button></form><button className="link-button" onClick={()=>{setMode(mode==='signIn'?'signUp':'signIn');setMsg('')}}>{mode==='signIn'?'New here? Create an account':'Already have an account? Sign in'}</button></section></Layout>}
 function Setup(){return <Layout><section className="card setup"><h1>Connect Coral Shop to Supabase</h1><p>This secure rebuild requires your free Supabase project credentials.</p><ol><li>Create a free project at Supabase.</li><li>Run <code>supabase/schema.sql</code> in its SQL Editor.</li><li>Copy <code>.env.example</code> to <code>.env</code> and add its Project URL and anon key.</li><li>Restart the app, create an account, then promote your first admin using the README instructions.</li></ol></section></Layout>}
-function Products({featured=false}){const [products,setProducts]=useState([]),[category,setCategory]=useState('all'),[loading,setLoading]=useState(true);const [params,setParams]=useSearchParams();const {add}=useCart();const [addedNotice,setAddedNotice]=useState('');const q=(params.get('q')||'').toLowerCase().trim();useEffect(()=>{if(!supabase){setProducts(sampleProducts);setLoading(false);return;}supabase.from('products').select('*, category:categories(name,slug)').eq('is_active',true).order('created_at',{ascending:false}).then(({data,error})=>{if(error)console.error(error);setProducts(data||[]);setLoading(false)})},[]);useEffect(()=>{const addFragment=params.get('add');if(!addFragment||!products.length)return;const target=products.find(p=>p.name&&p.name.toLowerCase().includes(addFragment.toLowerCase()));if(target){add(target);setAddedNotice(`${target.name} was added to your cart.`);}else{setAddedNotice(`We couldn't find "${addFragment}" in the catalog right now.`);}const next=new URLSearchParams(params);next.delete('add');setParams(next,{replace:true});},[products]);let list=category==='all'?products:products.filter(p=>p.category?.slug===category);if(q)list=list.filter(p=>(p.name+' '+(p.description||'')+' '+(p.category?.name||'')).toLowerCase().includes(q));list=list.slice(0,featured?4:100); return <section className="section"><div className="section-title"><div><p className="eyebrow">{featured?'Best sellers':'Catalog'}</p><h2>{featured?'Popular essentials':'Shop everything'}</h2></div>{featured&&<Link to="/products">Browse all products →</Link>}</div>{addedNotice&&<Notice kind="success">{addedNotice}</Notice>}{!featured&&<div className="chips">{['all','foodstuffs','gifts','household'].map(x=><button className={category===x?'selected':''} onClick={()=>setCategory(x)} key={x}>{x}</button>)}</div>}{loading?<p>Loading products…</p>:<div className="products">{list.map(p=><ProductCard key={p.id} product={p}/>)}</div>}{!loading&&!list.length&&<Notice>{q?'No products match your search. Try another term.':'No products are available yet. Import the product CSV from the Supabase Table Editor.'}</Notice>}</section>}
+function Products({featured=false}){const [products,setProducts]=useState([]),[category,setCategory]=useState('all'),[loading,setLoading]=useState(true);const [params,setParams]=useSearchParams();const {add}=useCart();const [addedNotice,setAddedNotice]=useState('');const q=(params.get('q')||'').toLowerCase().trim();useEffect(()=>{if(!supabase){setProducts(sampleProducts);setLoading(false);return;}supabase.from('products').select('*, category:categories(name,slug)').eq('is_active',true).order('created_at',{ascending:false}).then(({data,error})=>{if(error)console.error(error);setProducts(data||[]);setLoading(false)})},[]);useEffect(()=>{const addFragment=params.get('add');if(!addFragment||!products.length)return;const target=products.find(p=>p.name&&p.name.toLowerCase().includes(addFragment.toLowerCase()));if(target){add(target);setAddedNotice(`${target.name} was added to your cart.`);}else{setAddedNotice(`We couldn't find "${addFragment}" in the catalog right now.`);}const next=new URLSearchParams(params);next.delete('add');setParams(next,{replace:true});},[products]);let list=category==='all'?products:products.filter(p=>p.category?.slug===category);if(q)list=list.filter(p=>(p.name+' '+(p.description||'')+' '+(p.category?.name||'')).toLowerCase().includes(q));list=list.slice(0,featured?4:100); return <section className="section"><div className="section-title"><div><p className="eyebrow">{featured?'Best sellers':'Catalog'}</p>{featured?<h2>Popular essentials</h2>:<h1>Shop everything</h1>}</div>{featured&&<Link to="/products">Browse all products →</Link>}</div>{addedNotice&&<Notice kind="success">{addedNotice}</Notice>}{!featured&&<div className="chips">{['all','foodstuffs','gifts','household'].map(x=><button className={category===x?'selected':''} onClick={()=>setCategory(x)} key={x}>{x}</button>)}</div>}{loading?<p>Loading products…</p>:<div className="products">{list.map(p=><ProductCard key={p.id} product={p}/>)}</div>}{!loading&&!list.length&&<Notice>{q?'No products match your search. Try another term.':'No products are available yet. Import the product CSV from the Supabase Table Editor.'}</Notice>}</section>}
 function QuantityStepper({quantity,onDecrease,onIncrease,atLimit}){
   return <div className="qty-stepper">
     <button type="button" className="qty-btn" onClick={onDecrease} aria-label="Decrease quantity">−</button>
@@ -450,6 +452,7 @@ function ProductCard({product}){
             ? <QuantityStepper quantity={qty} onDecrease={onDecrease} onIncrease={onIncrease} atLimit={atLimit}/>
             : <button onClick={onAdd}>Add to cart</button>}
       </div>
+      <ShareProduct product={product}/>
     </div>
   </article>;
 }
@@ -462,17 +465,21 @@ function ProductDetail(){
   const [loading,setLoading]=useState(true);
   const [notFound,setNotFound]=useState(false);
   useEffect(()=>{
-    setLoading(true); setNotFound(false);
+    let active=true;
+    setLoading(true); setNotFound(false); setProduct(null);
     if(!supabase){
       const match=sampleProducts.find(p=>p.slug===slug||p.id===slug);
       if(match){ setProduct(match); } else { setNotFound(true); }
       setLoading(false);
       return;
     }
-    supabase.from('products').select('*, category:categories(name,slug)').eq('slug',slug).maybeSingle().then(({data,error})=>{
+    const column=/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(slug)?'id':'slug';
+    supabase.from('products').select('*, category:categories(name,slug)').eq('is_active',true).eq(column,slug).maybeSingle().then(({data,error})=>{
+      if(!active)return;
       if(error||!data){ setNotFound(true); setLoading(false); return; }
       setProduct(data); setLoading(false);
     });
+    return ()=>{active=false;};
   },[slug]);
   const inCart=product&&items.find(i=>i.id===product.id);
   const qty=inCart?inCart.quantity:0;
@@ -482,12 +489,12 @@ function ProductDetail(){
   const onIncrease=e=>{ if(atLimit) return; add(product); flyToCart(e.currentTarget); };
   const onDecrease=()=>update(product.id,qty-1);
   if(loading) return <Layout><section className="section"><p>Loading…</p></section></Layout>;
-  if(notFound) return <Layout><section className="section"><Notice kind="error">We couldn't find that product.</Notice><Link to="/products">← Back to shop</Link></section></Layout>;
+  if(notFound) return <Layout><section className="section"><h1>Product not found</h1><Notice kind="error">We couldn't find that product.</Notice><Link to="/products">← Back to shop</Link></section></Layout>;
   return <Layout>
     <section className="section product-detail">
       <Link to="/products" className="back-link">← Back to shop</Link>
       <div className="product-detail-grid">
-        <div className="product-detail-media"><img src={productImage(product)} alt={product.name||''}/></div>
+        <div className="product-detail-media"><img src={productImage(product)} alt={product.name||''} width="600" height="600" fetchPriority="high"/></div>
         <div className="product-detail-info">
           <small>{product.category?.name||'Essentials'}</small>
           <h1>{product.name}</h1>
@@ -496,6 +503,7 @@ function ProductDetail(){
           {outOfStock
             ? <p className="product-detail-stock out">Out of stock</p>
             : <p className="product-detail-stock">{product.stock_quantity} in stock</p>}
+          <ShareProduct key={product.id} product={product}/>
           <div className="product-detail-action">
             {outOfStock
               ? <button disabled>Out of stock</button>
@@ -572,7 +580,7 @@ function AisleCards(){
     </section>
   );
 }
-function Home(){return <Layout><section className="hero"><div className="hero-copy"><p className="eyebrow">Abeokuta grocery and gift store</p><h1>Quality foodstuffs, gifts and household essentials, delivered to your door.</h1><p>Coral Shopping brings the market to you. Stock your kitchen, send a gift hamper, or tell us what you need and we will source it for you.</p><div className="hero-actions"><Link className="button" to="/products">Shop now</Link><a className="button secondary" href="#custom-shop">Shop your way</a></div></div><div className="hero-art"><img src={heroImage} alt="Coral Shopping groceries and household items" loading="lazy"/></div></section><AisleCards/><Products featured/><CustomShopForm/><section className="callout"><div><p className="eyebrow">Need a hand?</p><h2>Chat with us on WhatsApp for quick orders and delivery questions.</h2></div><a className="button secondary" href="https://wa.me/2349061965441" target="_blank" rel="noreferrer">Chat on WhatsApp</a></section></Layout>}
+function Home(){return <Layout><section className="hero"><div className="hero-copy"><p className="eyebrow">Abeokuta grocery and gift store</p><h1>Quality foodstuffs, gifts and household essentials, delivered to your door.</h1><p>Coral Shopping brings the market to you. Stock your kitchen, send a gift hamper, or tell us what you need and we will source it for you.</p><div className="hero-actions"><Link className="button" to="/products">Shop now</Link><a className="button secondary" href="#custom-shop">Shop your way</a></div></div><div className="hero-art"><img src={heroImage} alt="Coral Shopping groceries and household items" width="1200" height="800" fetchPriority="high"/></div></section><AisleCards/><Products featured/><CustomShopForm/><section className="callout"><div><p className="eyebrow">Need a hand?</p><h2>Chat with us on WhatsApp for quick orders and delivery questions.</h2></div><a className="button secondary" href="https://wa.me/2349061965441" target="_blank" rel="noreferrer">Chat on WhatsApp</a></section></Layout>}
 function RequireAuth({children}){const {session,loading}=useAuth();if(loading)return <Layout><p>Loading…</p></Layout>;return session?children:<Navigate to="/sign-in" replace/>}
 function Checkout(){const {items,update,clear}=useCart();const {profile}=useAuth();const nav=useNavigate();const [shipping,setShipping]=useState({name:profile?.full_name||'',phone:profile?.phone||'',address:'',city:'Abeokuta',state:'Ogun'}),[msg,setMsg]=useState(''),[busy,setBusy]=useState(false);const subtotal=items.reduce((s,i)=>s+i.price*i.quantity,0),fee=2000;const submit=async e=>{e.preventDefault();if(!items.length)return;setBusy(true);const {data,error}=await supabase.rpc('create_order',{items:items.map(i=>({productId:i.id,quantity:i.quantity})),shipping});setBusy(false);if(error)return setMsg(error.message);clear();nav(`/orders?created=${data}`)};return <RequireAuth><Layout><section className="checkout"><div><p className="eyebrow">Delivery details</p><h1>Where should we deliver?</h1>{msg&&<Notice kind="error">{msg}</Notice>}<form className="card" onSubmit={submit}><div className="two"><label>Full name<input required value={shipping.name} onChange={e=>setShipping({...shipping,name:e.target.value})}/></label><label>Phone<input required value={shipping.phone} onChange={e=>setShipping({...shipping,phone:e.target.value})}/></label></div><label>Delivery address<textarea required value={shipping.address} onChange={e=>setShipping({...shipping,address:e.target.value})}/></label><div className="two"><label>City<input required value={shipping.city} onChange={e=>setShipping({...shipping,city:e.target.value})}/></label><label>State<input required value={shipping.state} onChange={e=>setShipping({...shipping,state:e.target.value})}/></label></div><h3>Payment method</h3><Notice>Pay by bank transfer. Once you place your order, we will show you our account details so you can complete payment and confirm it from your Orders page.</Notice><button disabled={busy||!items.length}>{busy?'Creating order…':'Place order'}</button></form></div><CartSummary items={items} update={update} subtotal={subtotal} fee={fee}/></section></Layout></RequireAuth>}
 function CartSummary({items,update,subtotal,fee}){return <aside className="summary card"><div className="summary-body"><h2>Your order</h2>{items.map(i=><div className="line cart-line" key={i.id}><img className="cart-thumb" src={productImage(i)} alt={i.name||''} loading="lazy"/><span className="cart-info">{i.name}<small>{money(i.price)} × <input aria-label="quantity" type="number" min="1" value={i.quantity} onChange={e=>update(i.id,Number(e.target.value))}/></small></span><b>{money(i.price*i.quantity)}</b></div>)}<hr/><div className="line"><span>Subtotal</span><b>{money(subtotal)}</b></div><div className="line"><span>Delivery</span><b>{money(fee)}</b></div></div><div className="line total summary-total"><span>Total</span><b>{money(subtotal+fee)}</b></div></aside>}
@@ -931,4 +939,4 @@ function NotFound(){
   </section></Layout>;
 }
 function ScrollToTop(){const {pathname}=useLocation();useEffect(()=>{window.scrollTo(0,0)},[pathname]);return null}
-function App(){return <AuthProvider><CartProvider><BrowserRouter basename="/shop"><ScrollToTop/><Routes><Route path="/" element={<Home/>}/><Route path="/products" element={<Layout><Products/></Layout>}/><Route path="/products/:slug" element={<ProductDetail/>}/><Route path="/sign-in" element={<SignIn/>}/><Route path="/checkout" element={<Checkout/>}/><Route path="/orders" element={<Orders/>}/><Route path="/dashboard" element={<Dashboard/>}/><Route path="/admin" element={<Admin/>}/><Route path="*" element={<NotFound/>}/></Routes></BrowserRouter></CartProvider></AuthProvider>};createRoot(document.getElementById('root')).render(<App/>);
+function App(){return <AuthProvider><CartProvider><BrowserRouter basename="/shop"><ScrollToTop/><PageSeo supabase={supabase}/><Routes><Route path="/" element={<Home/>}/><Route path="/products" element={<Layout><Products/></Layout>}/><Route path="/products/:slug" element={<ProductDetail/>}/><Route path="/sign-in" element={<SignIn/>}/><Route path="/checkout" element={<Checkout/>}/><Route path="/orders" element={<Orders/>}/><Route path="/dashboard" element={<Dashboard/>}/><Route path="/admin" element={<Admin/>}/><Route path="*" element={<NotFound/>}/></Routes></BrowserRouter></CartProvider></AuthProvider>};createRoot(document.getElementById('root')).render(<App/>);

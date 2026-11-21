@@ -39,7 +39,7 @@ This README is the onboarding guide: by the end of it you can run the app locall
 - **Frontend:** React 18 + Vite, React Router, plain CSS (indigo/yellow palette, Inter typography).
 - **Backend:** Supabase (Postgres + Row Level Security + Auth). All pricing, stock and role checks happen in Postgres security-definer functions, never in the browser.
 - **AI chat:** optional Supabase Edge Function (`supabase/functions/ai-chat`) that calls an OpenAI-compatible API with the live catalog and keeps the LLM key server-side; a built-in local brain as the offline fallback.
-- **Hosting:** any static host. `netlify.toml` is included for Netlify.
+- **Hosting:** Vercel or Netlify, with the marketing site at /, the shop at /shop, and serverless HTML routes for product previews and the sitemap.
 
 ## Repository layout
 
@@ -207,7 +207,7 @@ npm run preview   # serves the production build locally on 0.0.0.0:4173
 
 **Netlify** (configured in `netlify.toml`): connect the repo, and add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (plus any `VITE_BANK_*` you use) under **Site settings → Environment variables**. The SPA redirect (`/* → /index.html`, 200) is already in `netlify.toml`, so deep links like `/orders` work on refresh. Then add your production domain to Supabase's redirect URLs.
 
-Any other static host works the same way: upload `dist/` and rewrite all paths to `index.html`.
+The combined site serves the marketing pages at / and the shop at /shop. Vercel and Netlify include serverless HTML routes for product previews, page metadata and the live sitemap. A static-only host cannot provide live product previews. See [SEO.md](SEO.md) for deployment settings and verification.
 
 ## Troubleshooting
 

@@ -2,7 +2,40 @@
   command = "npm run build"
   publish = "dist"
 
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+  included_files = ["dist/shop/index.html", "dist/seo-config.json"]
+
 [[redirects]]
-  from = "/*"
-  to = "/index.html"
+  from = "/sitemap.xml"
+  to = "/.netlify/functions/sitemap"
   status = 200
+  force = true
+
+[[redirects]]
+  from = "/robots.txt"
+  to = "/.netlify/functions/robots"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/shop"
+  to = "/.netlify/functions/page"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/shop/*"
+  to = "/.netlify/functions/page?path=:splat"
+  status = 200
+
+[[redirects]]
+  from = "/products/*"
+  to = "/shop/products/:splat"
+  status = 301
+
+[[redirects]]
+  from = "/products"
+  to = "/shop/products"
+  status = 301

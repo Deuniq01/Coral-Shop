@@ -1006,3 +1006,14 @@ footer h4 { color: #fff; margin: 0 0 12px; font-size: 15px; }
 .notif-push .link-button{font-size:.82rem;color:var(--primary);font-weight:600}
 .notif-push .link-button:disabled{opacity:.6;cursor:default}
 .notif-push-note{font-size:.78rem;color:var(--muted)}
+
+/* Product sharing and readable server-rendered page content. */
+.product-share{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:14px 0}
+.share-product-button{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.share-status{font-size:.85rem;color:var(--muted)}
+.share-link{width:100%;min-width:0}
+.product-detail-media img{height:auto;aspect-ratio:1;object-fit:cover}
+.seo-initial-content{max-width:1000px;margin:32px auto;padding:24px}
+.seo-initial-content nav{margin-bottom:24px}
+.seo-initial-content img{max-width:100%;height:auto;object-fit:contain}
+.seo-initial-content h1,.seo-initial-content p{margin-bottom:16px}
