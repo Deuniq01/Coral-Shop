@@ -446,13 +446,15 @@ function ProductCard({product}){
       <p>{product.description}</p>
       <div className="product-bottom">
         <strong>{money(product.price)}</strong>
-        {outOfStock
-          ? <button disabled>Out of stock</button>
-          : qty>0
-            ? <QuantityStepper quantity={qty} onDecrease={onDecrease} onIncrease={onIncrease} atLimit={atLimit}/>
-            : <button onClick={onAdd}>Add to cart</button>}
+        <div className="product-cart-actions">
+          {outOfStock
+            ? <button disabled>Out of stock</button>
+            : qty>0
+              ? <QuantityStepper quantity={qty} onDecrease={onDecrease} onIncrease={onIncrease} atLimit={atLimit}/>
+              : <button onClick={onAdd}>Add to cart</button>}
+          {!outOfStock&&qty===0&&<ShareProduct product={product}/>}
+        </div>
       </div>
-      <ShareProduct product={product}/>
     </div>
   </article>;
 }
@@ -503,13 +505,15 @@ function ProductDetail(){
           {outOfStock
             ? <p className="product-detail-stock out">Out of stock</p>
             : <p className="product-detail-stock">{product.stock_quantity} in stock</p>}
-          <ShareProduct key={product.id} product={product}/>
           <div className="product-detail-action">
-            {outOfStock
-              ? <button disabled>Out of stock</button>
-              : qty>0
-                ? <QuantityStepper quantity={qty} onDecrease={onDecrease} onIncrease={onIncrease} atLimit={atLimit}/>
-                : <button onClick={onAdd}>Add to cart</button>}
+            <div className="product-cart-actions">
+              {outOfStock
+                ? <button disabled>Out of stock</button>
+                : qty>0
+                  ? <QuantityStepper quantity={qty} onDecrease={onDecrease} onIncrease={onIncrease} atLimit={atLimit}/>
+                  : <button onClick={onAdd}>Add to cart</button>}
+              {!outOfStock&&qty===0&&<ShareProduct key={product.id} product={product}/>}
+            </div>
             {qty>0&&<Link to="/checkout" className="button secondary">Go to checkout</Link>}
           </div>
         </div>

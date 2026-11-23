@@ -1008,10 +1008,12 @@ footer h4 { color: #fff; margin: 0 0 12px; font-size: 15px; }
 .notif-push-note{font-size:.78rem;color:var(--muted)}
 
 /* Product sharing and readable server-rendered page content. */
-.product-share{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:14px 0}
-.share-product-button{display:inline-flex;align-items:center;justify-content:center;gap:8px}
-.share-status{font-size:.85rem;color:var(--muted)}
-.share-link{width:100%;min-width:0}
+.product-cart-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.product-share{position:relative;display:flex;flex:0 0 40px;width:40px;height:40px}
+button.share-product-button{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;flex-shrink:0}
+.share-status{position:absolute;top:calc(100% + 6px);right:0;z-index:5;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;font-size:.8rem;color:var(--muted);white-space:nowrap;box-shadow:0 2px 8px #00018f12}
+.share-status:empty{display:none}
+.share-link{position:absolute;top:calc(100% + 38px);right:0;z-index:5;width:220px;max-width:calc(100vw - 36px);min-width:0;background:#fff}
 .product-detail-media img{height:auto;aspect-ratio:1;object-fit:cover}
 .seo-initial-content{max-width:1000px;margin:32px auto;padding:24px}
 .seo-initial-content nav{margin-bottom:24px}
